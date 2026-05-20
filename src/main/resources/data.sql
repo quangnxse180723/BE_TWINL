@@ -1,0 +1,10 @@
+INSERT INTO categories (name) VALUES ('Nữ') ON CONFLICT (name) DO NOTHING;
+INSERT INTO categories (name) VALUES ('Nam') ON CONFLICT (name) DO NOTHING;
+INSERT INTO categories (name) VALUES ('Trẻ em') ON CONFLICT (name) DO NOTHING;
+INSERT INTO categories (name) VALUES ('Thể thao') ON CONFLICT (name) DO NOTHING;
+INSERT INTO colors (name) VALUES ('Xanh') ON CONFLICT (name) DO NOTHING;
+INSERT INTO colors (name) VALUES ('Đỏ') ON CONFLICT (name) DO NOTHING;
+INSERT INTO colors (name) VALUES ('Tím') ON CONFLICT (name) DO NOTHING;
+INSERT INTO colors (name) VALUES ('Vàng') ON CONFLICT (name) DO NOTHING;
+INSERT INTO colors (name) VALUES ('Đen') ON CONFLICT (name) DO NOTHING;
+INSERT INTO colors (name) VALUES ('Trắng') ON CONFLICT (name) DO NOTHING;

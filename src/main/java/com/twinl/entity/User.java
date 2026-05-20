@@ -10,6 +10,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.Table;
+import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Set;
 import lombok.AllArgsConstructor;
@@ -38,6 +39,25 @@ public class User {
 
 	@Column(nullable = false)
 	private String password;
+
+	@Column(length = 500)
+	private String avatarUrl;
+
+	@Column(length = 20)
+	private String phone;
+
+	@Column(length = 255)
+	private String address;
+
+	@Column(length = 20)
+	private String gender;
+
+	@Column(name = "date_of_birth")
+	private LocalDate dateOfBirth;
+
+	@Column(name = "active")
+	@Builder.Default
+	private Boolean active = true;
 
 	@ManyToMany(fetch = FetchType.EAGER)
 	@JoinTable(
