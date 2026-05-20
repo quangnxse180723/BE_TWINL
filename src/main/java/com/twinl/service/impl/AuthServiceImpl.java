@@ -16,6 +16,8 @@ import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -70,10 +72,28 @@ public class AuthServiceImpl implements AuthService {
 
 	@Override
 	public AuthResponse login(LoginRequest request) {
+		User existingUser = userRepository.findByEmail(request.getEmail()).orElse(null);
+		if (existingUser != null) {
+			boolean isActive = existingUser.getActive() == null || Boolean.TRUE.equals(existingUser.getActive());
+			if (!isActive) {
+				throw new ResponseStatusException(
+						HttpStatus.FORBIDDEN,
+						"Tài khoản của bạn đã bị khóa, vui lòng liên hệ admin qua gmail: twinl2hand@gmail.com"
+				);
+			}
+		}
+
 		try {
 			authenticationManager.authenticate(
 					new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
 			);
+		} catch (DisabledException ex) {
+			throw new ResponseStatusException(
+					HttpStatus.FORBIDDEN,
+					"Tài khoản của bạn đã bị khóa, vui lòng liên hệ admin qua gmail: twinl2hand@gmail.com"
+			);
+		} catch (BadCredentialsException ex) {
+			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
 		} catch (Exception ex) {
 			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
 		}
@@ -93,11 +113,18 @@ public class AuthServiceImpl implements AuthService {
 		List<String> roles = user.getRoles().stream()
 				.map(role -> role.getName().name())
 				.collect(Collectors.toList());
+		boolean isActive = user.getActive() == null || Boolean.TRUE.equals(user.getActive());
 
 		return UserResponse.builder()
 				.id(user.getId())
 				.displayName(user.getDisplayName())
 				.email(user.getEmail())
+				.avatarUrl(user.getAvatarUrl())
+				.phone(user.getPhone())
+				.address(user.getAddress())
+				.gender(user.getGender())
+				.dateOfBirth(user.getDateOfBirth())
+				.active(isActive)
 				.roles(roles)
 				.build();
 	}
