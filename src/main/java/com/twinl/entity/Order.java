@@ -8,7 +8,10 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -49,6 +52,10 @@ public class Order {
 	@Column(length = 255)
 	private String shippingAddress;
 
+	@ManyToOne
+	@JoinColumn(name = "user_id")
+	private User user;
+
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false, length = 20)
 	private OrderStatus status;
@@ -56,9 +63,28 @@ public class Order {
 	@Column(nullable = false, precision = 12, scale = 2)
 	private BigDecimal totalAmount;
 
+	@Enumerated(EnumType.STRING)
+	@Column(length = 20)
+	private PaymentMethod paymentMethod;
+
+	@Enumerated(EnumType.STRING)
+	@Column(length = 20)
+	private PaymentStatus paymentStatus;
+
+	@Column(length = 50)
+	private String paymentTxnRef;
+
+	@Column(length = 50)
+	private String paymentTransactionNo;
+
+	private LocalDateTime paymentPaidAt;
+
 	@OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
 	@Builder.Default
 	private Set<OrderItem> items = new HashSet<>();
+
+	@OneToOne(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+	private Shipment shipment;
 
 	@Column(nullable = false)
 	private LocalDateTime createdAt;
