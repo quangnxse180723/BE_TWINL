@@ -14,4 +14,4 @@ COPY --from=build /app/target/*.jar app.jar
 # Expose port mặc định của Spring Boot
 EXPOSE 8080
 # Lệnh khởi chạy
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-Dspring.profiles.active=supabase", "-jar", "app.jar"]
