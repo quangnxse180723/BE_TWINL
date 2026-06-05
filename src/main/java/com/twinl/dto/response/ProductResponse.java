@@ -11,6 +11,8 @@ import lombok.Getter;
 @Builder
 public class ProductResponse {
 	private Long id;
+	private Long sellerId;
+	private String sellerName;
 	private String name;
 	private String description;
 	private BigDecimal price;

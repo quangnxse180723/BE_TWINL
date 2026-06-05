@@ -11,7 +11,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
-import jakarta.persistence.OneToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -52,6 +51,14 @@ public class Order {
 	@Column(length = 255)
 	private String shippingAddress;
 
+	// Giữ lại các trường địa lý để Shipper biết địa chỉ chi tiết
+	@Column(length = 20)
+	private String shippingWardCode;
+
+	private Integer shippingDistrictId;
+
+	private Integer shippingProvinceId;
+
 	@ManyToOne
 	@JoinColumn(name = "user_id")
 	private User user;
@@ -79,12 +86,25 @@ public class Order {
 
 	private LocalDateTime paymentPaidAt;
 
+	// Shipper nội bộ được gán xử lý đơn
+	@ManyToOne
+	@JoinColumn(name = "shipper_id")
+	private User shipper;
+
+	// Thời điểm giao hàng thành công — dùng để kích hoạt bộ đếm Escrow 48h
+	private LocalDateTime deliveredAt;
+
+	// Ghi chú từ Shipper khi cập nhật trạng thái
+	@Column(length = 500)
+	private String note;
+
+	@Column(nullable = false)
+	@Builder.Default
+	private Boolean escrowReleased = false;
+
 	@OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
 	@Builder.Default
 	private Set<OrderItem> items = new HashSet<>();
-
-	@OneToOne(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
-	private Shipment shipment;
 
 	@Column(nullable = false)
 	private LocalDateTime createdAt;

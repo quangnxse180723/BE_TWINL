@@ -1,0 +1,16 @@
+package com.twinl.dto.response;
+import lombok.*;
+
+@Data @Builder @NoArgsConstructor @AllArgsConstructor
+public class AiAutoFillResponse {
+    private String name;
+    private String brand;
+    private String style;
+    private String gender;
+    private String description;
+    private String estimatedPrice;
+    private String material;
+    private String condition;
+    private String color;
+    private String rawData;
+}

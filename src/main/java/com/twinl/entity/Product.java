@@ -57,6 +57,10 @@ public class Product {
 	@Column(length = 50)
 	private String gender;
 
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "seller_id")
+	private User seller;
+
 	@Column(length = 30)
 	private String status;
 

@@ -7,9 +7,11 @@ import com.twinl.dto.response.ProductResponse;
 import com.twinl.entity.Category;
 import com.twinl.entity.Color;
 import com.twinl.entity.Product;
+import com.twinl.entity.User;
 import com.twinl.repository.CategoryRepository;
 import com.twinl.repository.ColorRepository;
 import com.twinl.repository.ProductRepository;
+import com.twinl.repository.UserRepository;
 import com.twinl.service.ProductService;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -34,17 +36,20 @@ public class ProductServiceImpl implements ProductService {
 	private final ProductRepository productRepository;
 	private final CategoryRepository categoryRepository;
 	private final ColorRepository colorRepository;
+	private final UserRepository userRepository;
 	private final Cloudinary cloudinary;
 
 	public ProductServiceImpl(
 			ProductRepository productRepository,
 			CategoryRepository categoryRepository,
 			ColorRepository colorRepository,
+			UserRepository userRepository,
 			Cloudinary cloudinary
 	) {
 		this.productRepository = productRepository;
 		this.categoryRepository = categoryRepository;
 		this.colorRepository = colorRepository;
+		this.userRepository = userRepository;
 		this.cloudinary = cloudinary;
 	}
 
@@ -143,6 +148,40 @@ public class ProductServiceImpl implements ProductService {
 	}
 
 	@Override
+	public ProductResponse createSellerProduct(ProductRequest request, String username) {
+		User seller = userRepository.findByEmail(username)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Seller not found"));
+
+		validateImageUrls(request.getImageUrls());
+		Product product = Product.builder()
+				.name(request.getName())
+				.description(request.getDescription())
+				.price(request.getPrice())
+				.category(requireCategory(request.getCategoryId()))
+				.brand(request.getBrand())
+				.gender(request.getGender())
+				.imageUrls(request.getImageUrls() == null ? new ArrayList<>() : request.getImageUrls())
+				.status(request.getStatus() == null ? "ACTIVE" : request.getStatus())
+				.style(request.getStyle())
+				.stock(request.getStock())
+				.sizes(request.getSizes() == null ? new java.util.HashSet<>() : request.getSizes())
+				.colors(requireColors(request.getColorIds()))
+				.seller(seller)
+				.build();
+
+		Product saved = productRepository.save(product);
+		return toResponse(saved);
+	}
+
+	@Override
+	public Page<ProductResponse> getProductsBySeller(String username, int page, int sizePage) {
+		User seller = userRepository.findByEmail(username)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Seller not found"));
+		PageRequest pageable = PageRequest.of(page, sizePage, Sort.by("createdAt").descending());
+		return productRepository.findBySellerId(seller.getId(), pageable).map(this::toResponse);
+	}
+
+	@Override
 	public ProductResponse updateProduct(Long id, ProductRequest request) {
 		Product product = productRepository.findById(id)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
@@ -229,6 +268,8 @@ public class ProductServiceImpl implements ProductService {
 	private ProductResponse toResponse(Product product) {
 		return ProductResponse.builder()
 				.id(product.getId())
+				.sellerId(product.getSeller() != null ? product.getSeller().getId() : null)
+				.sellerName(product.getSeller() != null ? product.getSeller().getDisplayName() : null)
 				.name(product.getName())
 				.description(product.getDescription())
 				.price(product.getPrice())

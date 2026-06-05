@@ -14,6 +14,9 @@ public class UserResponse {
 	private String avatarUrl;
 	private String phone;
 	private String address;
+	private String wardCode;
+	private Integer districtId;
+	private Integer provinceId;
 	private String gender;
 	private LocalDate dateOfBirth;
 	private Boolean active;

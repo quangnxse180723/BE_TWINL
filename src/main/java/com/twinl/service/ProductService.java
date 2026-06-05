@@ -23,6 +23,8 @@ public interface ProductService {
 
 	ProductResponse getProductById(Long id);
 	ProductResponse createProduct(ProductRequest request);
+	ProductResponse createSellerProduct(ProductRequest request, String username);
+	Page<ProductResponse> getProductsBySeller(String username, int page, int sizePage);
 	ProductResponse updateProduct(Long id, ProductRequest request);
 	void deleteProduct(Long id);
 	List<String> uploadProductImages(List<MultipartFile> files);

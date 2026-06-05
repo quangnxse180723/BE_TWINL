@@ -42,18 +42,36 @@ public class SecurityConfig {
 				.csrf(csrf -> csrf.disable())
 				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.authorizeHttpRequests(auth -> auth
+						.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+						// Public endpoints
 						.requestMatchers("/api/auth/**").permitAll()
 						.requestMatchers("/uploads/**").permitAll()
 						.requestMatchers(HttpMethod.POST, "/api/contact").permitAll()
+						.requestMatchers(HttpMethod.POST, "/api/v1/analytics/track").permitAll()
+						.requestMatchers(HttpMethod.POST, "/api/v1/ai/scan").permitAll()
+						.requestMatchers(HttpMethod.POST, "/api/v1/ai/legit-check").permitAll()
+						.requestMatchers(HttpMethod.POST, "/api/v1/ai/image-quality", "/api/v1/ai/autofill").permitAll()
 						.requestMatchers("/api/payments/vnpay/return", "/api/payments/vnpay/ipn").permitAll()
-						.requestMatchers("/api/shipments/ghn/webhook").permitAll()
+						.requestMatchers(HttpMethod.GET, "/api/categories", "/api/colors").permitAll()
+
+						// In-house Shipper endpoints
+						.requestMatchers(HttpMethod.POST, "/api/v1/orders/*/assign").hasAnyRole("ADMIN", "STAFF")
+						.requestMatchers("/api/v1/shipper/**").hasRole("SHIPPER")
+
+						// Admin/Staff endpoints
 						.requestMatchers("/api/staff/**").hasAnyRole("ADMIN", "STAFF")
-						.requestMatchers("/api/admin/shipments/**").hasAnyRole("ADMIN", "STAFF")
 						.requestMatchers("/api/admin/**").hasRole("ADMIN")
+
+						// Products
 						.requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
+						.requestMatchers(HttpMethod.POST, "/api/products", "/api/products/images").authenticated()
 						.requestMatchers("/api/products/**").hasAnyRole("ADMIN", "STAFF")
+
+						// Users
 						.requestMatchers("/api/users/me", "/api/users/me/**").authenticated()
 						.requestMatchers("/api/users/**").hasAnyRole("ADMIN", "STAFF")
+
+						// Anything else requires authentication
 						.anyRequest().authenticated()
 				)
 				.authenticationProvider(authenticationProvider())

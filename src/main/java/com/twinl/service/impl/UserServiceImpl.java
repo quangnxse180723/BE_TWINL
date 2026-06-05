@@ -60,6 +60,15 @@ public class UserServiceImpl implements UserService {
 		if (request.getAddress() != null) {
 			user.setAddress(request.getAddress());
 		}
+		if (request.getWardCode() != null) {
+			user.setWardCode(request.getWardCode());
+		}
+		if (request.getDistrictId() != null) {
+			user.setDistrictId(request.getDistrictId());
+		}
+		if (request.getProvinceId() != null) {
+			user.setProvinceId(request.getProvinceId());
+		}
 		if (request.getGender() != null) {
 			user.setGender(request.getGender());
 		}
@@ -136,6 +145,9 @@ public class UserServiceImpl implements UserService {
 				.password(passwordEncoder.encode(request.getPassword()))
 				.phone(request.getPhone())
 				.address(request.getAddress())
+				.wardCode(request.getWardCode())
+				.districtId(request.getDistrictId())
+				.provinceId(request.getProvinceId())
 				.gender(request.getGender())
 				.dateOfBirth(request.getDateOfBirth())
 				.active(true)
@@ -161,6 +173,15 @@ public class UserServiceImpl implements UserService {
 		}
 		if (request.getAddress() != null) {
 			user.setAddress(request.getAddress());
+		}
+		if (request.getWardCode() != null) {
+			user.setWardCode(request.getWardCode());
+		}
+		if (request.getDistrictId() != null) {
+			user.setDistrictId(request.getDistrictId());
+		}
+		if (request.getProvinceId() != null) {
+			user.setProvinceId(request.getProvinceId());
 		}
 		if (request.getGender() != null) {
 			user.setGender(request.getGender());
@@ -212,6 +233,9 @@ public class UserServiceImpl implements UserService {
 				.avatarUrl(user.getAvatarUrl())
 				.phone(user.getPhone())
 				.address(user.getAddress())
+				.wardCode(user.getWardCode())
+				.districtId(user.getDistrictId())
+				.provinceId(user.getProvinceId())
 				.gender(user.getGender())
 				.dateOfBirth(user.getDateOfBirth())
 				.active(isActive)

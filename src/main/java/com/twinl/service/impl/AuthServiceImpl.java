@@ -13,6 +13,8 @@ import com.twinl.repository.UserRepository;
 import com.twinl.service.AuthService;
 import java.util.List;
 import java.util.stream.Collectors;
+import jakarta.servlet.http.HttpServletRequest;
+import com.twinl.service.AnalyticsService;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -29,19 +31,25 @@ public class AuthServiceImpl implements AuthService {
 	private final PasswordEncoder passwordEncoder;
 	private final AuthenticationManager authenticationManager;
 	private final JwtService jwtService;
+	private final HttpServletRequest httpServletRequest;
+	private final AnalyticsService analyticsService;
 
 	public AuthServiceImpl(
 			UserRepository userRepository,
 			RoleRepository roleRepository,
 			PasswordEncoder passwordEncoder,
 			AuthenticationManager authenticationManager,
-			JwtService jwtService
+			JwtService jwtService,
+			HttpServletRequest httpServletRequest,
+			AnalyticsService analyticsService
 	) {
 		this.userRepository = userRepository;
 		this.roleRepository = roleRepository;
 		this.passwordEncoder = passwordEncoder;
 		this.authenticationManager = authenticationManager;
 		this.jwtService = jwtService;
+		this.httpServletRequest = httpServletRequest;
+		this.analyticsService = analyticsService;
 	}
 
 	@Override
@@ -76,6 +84,11 @@ public class AuthServiceImpl implements AuthService {
 		if (existingUser != null) {
 			boolean isActive = existingUser.getActive() == null || Boolean.TRUE.equals(existingUser.getActive());
 			if (!isActive) {
+				if (!passwordEncoder.matches(request.getPassword(), existingUser.getPassword())) {
+					analyticsService.logAccess(httpServletRequest, "FAILED", existingUser.getId());
+					throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Sai email hoặc mật khẩu");
+				}
+				analyticsService.logAccess(httpServletRequest, "FAILED", existingUser.getId());
 				throw new ResponseStatusException(
 						HttpStatus.FORBIDDEN,
 						"Tài khoản của bạn đã bị khóa, vui lòng liên hệ admin qua gmail: twinl2hand@gmail.com"
@@ -88,18 +101,27 @@ public class AuthServiceImpl implements AuthService {
 					new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
 			);
 		} catch (DisabledException ex) {
+			if (existingUser == null || !passwordEncoder.matches(request.getPassword(), existingUser.getPassword())) {
+				analyticsService.logAccess(httpServletRequest, "FAILED", existingUser != null ? existingUser.getId() : null);
+				throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Sai email hoặc mật khẩu");
+			}
+			analyticsService.logAccess(httpServletRequest, "FAILED", existingUser.getId());
 			throw new ResponseStatusException(
 					HttpStatus.FORBIDDEN,
 					"Tài khoản của bạn đã bị khóa, vui lòng liên hệ admin qua gmail: twinl2hand@gmail.com"
 			);
 		} catch (BadCredentialsException ex) {
-			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
+			analyticsService.logAccess(httpServletRequest, "FAILED", existingUser != null ? existingUser.getId() : null);
+			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Sai email hoặc mật khẩu");
 		} catch (Exception ex) {
-			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
+			analyticsService.logAccess(httpServletRequest, "FAILED", existingUser != null ? existingUser.getId() : null);
+			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Sai email hoặc mật khẩu");
 		}
 
 		User user = userRepository.findByEmail(request.getEmail())
-				.orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials"));
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Sai email hoặc mật khẩu"));
+
+		analyticsService.logAccess(httpServletRequest, "SUCCESS", user.getId());
 
 		String token = jwtService.generateToken(user);
 		return AuthResponse.builder()
@@ -122,6 +144,9 @@ public class AuthServiceImpl implements AuthService {
 				.avatarUrl(user.getAvatarUrl())
 				.phone(user.getPhone())
 				.address(user.getAddress())
+				.wardCode(user.getWardCode())
+				.districtId(user.getDistrictId())
+				.provinceId(user.getProvinceId())
 				.gender(user.getGender())
 				.dateOfBirth(user.getDateOfBirth())
 				.active(isActive)

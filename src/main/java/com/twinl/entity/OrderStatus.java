@@ -2,7 +2,9 @@ package com.twinl.entity;
 
 public enum OrderStatus {
 	PENDING,
-	PROCESSING,
+	ASSIGNED,
+	PICKED_UP,
+	DELIVERED,
 	COMPLETED,
-	CANCELLED
+	CANCELED
 }

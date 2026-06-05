@@ -18,6 +18,13 @@ public class UpdateProfileRequest {
 	private String address;
 
 	@Size(max = 20)
+	private String wardCode;
+
+	private Integer districtId;
+
+	private Integer provinceId;
+
+	@Size(max = 20)
 	private String gender;
 
 	private LocalDate dateOfBirth;

@@ -9,14 +9,14 @@ import lombok.Setter;
 @Getter
 @Setter
 public class RegisterRequest {
-	@NotBlank
+	@NotBlank(message = "Tên hiển thị không được để trống")
 	private String displayName;
 
-	@Email
-	@NotBlank
+	@Email(message = "Email không hợp lệ")
+	@NotBlank(message = "Email không được để trống")
 	private String email;
 
-	@Size(min = 6)
-	@NotBlank
+	@Size(min = 6, message = "Mật khẩu tối thiểu là 6 ký tự")
+	@NotBlank(message = "Mật khẩu không được để trống")
 	private String password;
 }

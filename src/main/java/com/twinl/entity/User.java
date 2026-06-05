@@ -50,6 +50,13 @@ public class User {
 	private String address;
 
 	@Column(length = 20)
+	private String wardCode;
+
+	private Integer districtId;
+
+	private Integer provinceId;
+
+	@Column(length = 20)
 	private String gender;
 
 	@Column(name = "date_of_birth")

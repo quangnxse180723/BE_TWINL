@@ -11,11 +11,14 @@ import com.twinl.entity.OrderItem;
 import com.twinl.entity.OrderStatus;
 import com.twinl.entity.PaymentMethod;
 import com.twinl.entity.PaymentStatus;
+import com.twinl.entity.Product;
 import com.twinl.entity.User;
 import com.twinl.repository.CartRepository;
 import com.twinl.repository.OrderRepository;
+import com.twinl.repository.ProductRepository;
 import com.twinl.repository.UserRepository;
 import com.twinl.service.PaymentService;
+
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
@@ -27,6 +30,9 @@ import java.util.stream.Collectors;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.math.RoundingMode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -42,16 +48,21 @@ public class PaymentServiceImpl implements PaymentService {
     private final OrderRepository orderRepository;
     private final CartRepository cartRepository;
     private final UserRepository userRepository;
+    private final ProductRepository productRepository;
+
+    private static final Logger log = LoggerFactory.getLogger(PaymentServiceImpl.class);
 
     public PaymentServiceImpl(
             VnpayProperties vnpayProperties,
             OrderRepository orderRepository,
             CartRepository cartRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            ProductRepository productRepository) {
         this.vnpayProperties = vnpayProperties;
         this.orderRepository = orderRepository;
         this.cartRepository = cartRepository;
         this.userRepository = userRepository;
+        this.productRepository = productRepository;
     }
 
     @Override
@@ -120,10 +131,25 @@ public class PaymentServiceImpl implements PaymentService {
 
         if (validationResult.isSuccess) {
             order.setPaymentStatus(PaymentStatus.SUCCESS);
-            order.setStatus(OrderStatus.PROCESSING);
+            // Đơn ở trạng thái PENDING, chờ Admin gán Shipper nội bộ
+            order.setStatus(OrderStatus.PENDING);
             order.setPaymentTransactionNo(validationResult.transactionNo);
             order.setPaymentPaidAt(LocalDateTime.now());
             clearCart(order);
+
+            // Trừ số lượng trong kho
+            for (OrderItem item : order.getItems()) {
+                Product product = item.getProduct();
+                if (product != null && product.getStock() != null) {
+                    int newStock = product.getStock() - item.getQuantity();
+                    product.setStock(Math.max(newStock, 0));
+                    productRepository.save(product);
+                }
+            }
+
+            orderRepository.save(order);
+            log.info("[PAYMENT] Đơn hàng {} thanh toán thành công. Chờ Admin gán Shipper.", order.getCode());
+            return;
         } else {
             order.setPaymentStatus(PaymentStatus.FAILED);
         }
@@ -178,6 +204,9 @@ public class PaymentServiceImpl implements PaymentService {
                 .customerEmail(user.getEmail())
                 .customerPhone(user.getPhone())
                 .shippingAddress(user.getAddress())
+            .shippingWardCode(user.getWardCode())
+            .shippingDistrictId(user.getDistrictId())
+            .shippingProvinceId(user.getProvinceId())
                 .status(OrderStatus.PENDING)
                 .totalAmount(totalAmount)
                 .user(user)
@@ -304,7 +333,17 @@ public class PaymentServiceImpl implements PaymentService {
         if (user.getAddress() == null || user.getAddress().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing address");
         }
+        if (user.getWardCode() == null || user.getWardCode().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing ward code");
+        }
+        if (user.getDistrictId() == null || user.getDistrictId() <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing district id");
+        }
+        if (user.getProvinceId() == null || user.getProvinceId() <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing province id");
+        }
     }
+
 
     private User getCurrentAuthenticatedUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();

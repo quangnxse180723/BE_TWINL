@@ -3,8 +3,6 @@ package com.twinl.dto.response;
 import com.twinl.entity.OrderStatus;
 import com.twinl.entity.PaymentMethod;
 import com.twinl.entity.PaymentStatus;
-import com.twinl.entity.ShipmentStatus;
-import com.twinl.entity.ShippingProvider;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Set;
@@ -20,14 +18,29 @@ public class OrderResponse {
 	private String customerEmail;
 	private String customerPhone;
 	private String shippingAddress;
+	private String shippingWardCode;
+	private Integer shippingDistrictId;
+	private Integer shippingProvinceId;
 	private OrderStatus status;
 	private BigDecimal totalAmount;
 	private PaymentMethod paymentMethod;
 	private PaymentStatus paymentStatus;
-	private ShippingProvider shippingProvider;
-	private ShipmentStatus shippingStatus;
-	private String trackingCode;
-	private BigDecimal shippingFee;
+
+	// In-house Shipper info
+	private Long shipperId;
+	private String shipperName;
+
+	// Giao hàng thành công — trigger Escrow 48h
+	private LocalDateTime deliveredAt;
+
+	// Ghi chú Shipper
+	private String note;
+
+	// Split Payment & Escrow Info
+	private BigDecimal platformFee;
+	private BigDecimal sellerAmount;
+	private String escrowStatus;
+
 	private Set<OrderItemResponse> items;
 	private LocalDateTime createdAt;
 	private LocalDateTime updatedAt;
