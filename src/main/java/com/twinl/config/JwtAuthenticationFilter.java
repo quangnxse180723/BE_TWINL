@@ -44,18 +44,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 		try {
 			String username = jwtService.extractUsername(token);
 			if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-				UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-				if (!userDetails.isEnabled()) {
-					SecurityContextHolder.clearContext();
-					filterChain.doFilter(request, response);
-					return;
-				}
-				if (jwtService.isTokenValid(token, userDetails.getUsername())) {
+				// Tránh gọi Database (userDetailsService) mỗi lần gửi request
+				if (jwtService.isTokenValid(token, username)) {
+					java.util.List<String> roles = jwtService.extractRoles(token);
+					java.util.List<org.springframework.security.core.authority.SimpleGrantedAuthority> authorities = 
+						roles.stream()
+							.map(role -> new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_" + role))
+							.collect(java.util.stream.Collectors.toList());
+
+					UserDetails userDetails = new org.springframework.security.core.userdetails.User(
+							username, "", authorities
+					);
+
 					UsernamePasswordAuthenticationToken authentication =
 							new UsernamePasswordAuthenticationToken(
 									userDetails,
 									null,
-									userDetails.getAuthorities()
+									authorities
 						);
 					authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 					SecurityContextHolder.getContext().setAuthentication(authentication);
