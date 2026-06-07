@@ -93,7 +93,7 @@ public class AiScannerServiceImpl implements AiScannerService {
 
             HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
 
-            String[] fallbackModels = { modelId, "gemini-flash-latest", "gemini-2.0-flash", "gemini-3.1-flash-lite-preview" };
+            String[] fallbackModels = { modelId, "gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest" };
             ResponseEntity<String> response = null;
             String lastError = "";
 
@@ -149,8 +149,8 @@ public class AiScannerServiceImpl implements AiScannerService {
             partText.put("text", systemPromptText);
             parts.add(partText);
 
-            // Add up to 3 image parts
-            int imageCount = Math.min(files == null ? 0 : files.size(), 3);
+            // Add up to 4 image parts
+            int imageCount = Math.min(files == null ? 0 : files.size(), 4);
             for (int i = 0; i < imageCount; i++) {
                 MultipartFile imgFile = files.get(i);
                 String base64Image = Base64.getEncoder().encodeToString(imgFile.getBytes());
@@ -175,35 +175,9 @@ public class AiScannerServiceImpl implements AiScannerService {
             genConfig.put("temperature", 0.1);
             requestBody.put("generationConfig", genConfig);
 
-            RestTemplate restTemplate = new RestTemplate();
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
+            String responseBody = callGeminiWithFallback(requestBody);
 
-            HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
-
-            String[] fallbackModels = { MODEL_FLASH, "gemini-flash-latest", "gemini-2.0-flash", "gemini-3.1-flash-lite-preview" };
-            ResponseEntity<String> response = null;
-            String lastError = "";
-
-            for (String mId : fallbackModels) {
-                try {
-                    String geminiApiUrl = "https://generativelanguage.googleapis.com/v1beta/models/"
-                            + mId
-                            + ":generateContent?key=" + geminiApiKey;
-                    log.info("Calling Gemini API for legit check with model {}: {}", mId, geminiApiUrl.replace(geminiApiKey, "***"));
-                    response = restTemplate.postForEntity(geminiApiUrl, request, String.class);
-                    break;
-                } catch (Exception ex) {
-                    log.warn("Lỗi gọi model {}, thử fallback. Chi tiết: {}", mId, ex.getMessage());
-                    lastError = ex.getMessage();
-                }
-            }
-
-            if (response == null) {
-                throw new RuntimeException("Tất cả các model đều quá tải hoặc lỗi: " + lastError);
-            }
-
-            return parseLegitCheckResponse(response.getBody());
+            return parseLegitCheckResponse(responseBody);
 
         } catch (ResponseStatusException rse) {
             throw rse;
@@ -399,7 +373,7 @@ public class AiScannerServiceImpl implements AiScannerService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
-        String[] fallbackModels = { MODEL_FLASH, "gemini-flash-latest", "gemini-2.0-flash", "gemini-3.1-flash-lite-preview" };
+        String[] fallbackModels = { MODEL_FLASH, "gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest" };
         String lastError = "";
         for (String mId : fallbackModels) {
             try {
@@ -407,11 +381,113 @@ public class AiScannerServiceImpl implements AiScannerService {
                 log.info("Calling Gemini with model {}", mId);
                 ResponseEntity<String> response = restTemplate.postForEntity(url, request, String.class);
                 return response.getBody();
+            } catch (org.springframework.web.client.HttpStatusCodeException httpEx) {
+                String errorBody = httpEx.getResponseBodyAsString();
+                log.warn("Model {} failed with HTTP {}: {}", mId, httpEx.getStatusCode(), errorBody);
+                lastError = "HTTP " + httpEx.getStatusCode() + ": " + errorBody;
             } catch (Exception ex) {
                 log.warn("Model {} failed: {}", mId, ex.getMessage());
                 lastError = ex.getMessage();
             }
         }
-        throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Tất cả Gemini model đều quá tải: " + lastError);
+        throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Tất cả Gemini model đều quá tải hoặc lỗi: " + lastError);
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    //  AI GUARD: Pre-validate ảnh upload theo từng slot
+    //  Dùng Gemini Flash (siêu nhanh ~1-2s) để chặn ảnh rác
+    // ════════════════════════════════════════════════════════════════
+
+    /** Mô tả tiếng Việt cho từng slot – dùng trong prompt gửi cho AI */
+    private static final Map<String, String> SLOT_DESCRIPTIONS = Map.of(
+        "front",   "ảnh chụp toàn thân mặt trước của một sản phẩm thời trang (quần áo, giày, túi xách)",
+        "logo",    "ảnh chụp cận cảnh logo hoặc họa tiết thương hiệu trên sản phẩm thời trang",
+        "neckTag", "ảnh chụp cận cảnh mác cổ áo (neck tag/care label) của sản phẩm thời trang – thấy rõ chữ in trên mác",
+        "washTag", "ảnh chụp cận cảnh mác giặt hoặc mác thông tin (wash tag/inner label) của sản phẩm thời trang"
+    );
+
+    /** Thông báo lỗi thân thiện khi ảnh sai slot */
+    private static final Map<String, String> SLOT_ERROR_MESSAGES = Map.of(
+        "front",   "Ảnh ô số 1 chưa đúng! Vui lòng chụp toàn thân mặt trước sản phẩm, đủ sáng và rõ nét.",
+        "logo",    "Ảnh ô số 2 chưa đúng! Vui lòng chụp cận cảnh Logo/họa tiết thương hiệu, tránh bị mờ hoặc quá xa.",
+        "neckTag", "Ảnh ô số 3 chưa đúng! Vui lòng chụp cận cảnh mác cổ áo (neck tag) – chữ trên mác phải đọc được.",
+        "washTag", "Ảnh ô số 4 chưa đúng! Vui lòng chụp cận cảnh mác giặt/mác thông tin bên trong sản phẩm."
+    );
+
+    @Override
+    public Map<String, Object> validateImageSlot(MultipartFile file, String slotType) {
+        if (geminiApiKey == null || geminiApiKey.isEmpty()) {
+            // Không có API key → cho qua để không block người dùng
+            log.warn("[AI Guard] Không có Gemini API key, bỏ qua pre-validation cho slot: {}", slotType);
+            return Map.of("valid", true, "message", "Ảnh được chấp nhận.");
+        }
+
+        String slotDesc = SLOT_DESCRIPTIONS.getOrDefault(slotType,
+            "ảnh sản phẩm thời trang rõ nét");
+
+        String prompt = String.format(
+            "Nhìn vào ảnh này. Đây có phải là %s không?\n" +
+            "Yêu cầu: ảnh phải rõ nét, đủ sáng, và chụp đúng góc độ.\n" +
+            "Chỉ trả lời đúng 1 từ: YES hoặc NO.",
+            slotDesc
+        );
+
+        try {
+            String base64Image = Base64.getEncoder().encodeToString(file.getBytes());
+            String mimeType = file.getContentType() != null ? file.getContentType() : "image/jpeg";
+
+            Map<String, Object> inlineData = new HashMap<>();
+            inlineData.put("mimeType", mimeType);
+            inlineData.put("data", base64Image);
+
+            Map<String, Object> partImage = new HashMap<>();
+            partImage.put("inlineData", inlineData);
+
+            Map<String, Object> partText = new HashMap<>();
+            partText.put("text", prompt);
+
+            Map<String, Object> content = new HashMap<>();
+            content.put("parts", List.of(partText, partImage));
+
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("contents", List.of(content));
+
+            // Dùng temperature = 0 để AI trả lời chắc chắn YES/NO
+            Map<String, Object> genConfig = new HashMap<>();
+            genConfig.put("temperature", 0.0);
+            genConfig.put("maxOutputTokens", 5); // Chỉ cần 1 từ
+            requestBody.put("generationConfig", genConfig);
+
+            String responseBody = callGeminiWithFallback(requestBody);
+
+            JsonNode root = objectMapper.readTree(responseBody);
+            JsonNode candidates = root.path("candidates");
+            if (candidates.isArray() && candidates.size() > 0) {
+                String answer = candidates.get(0)
+                        .path("content").path("parts").get(0)
+                        .path("text").asText("NO").trim().toUpperCase();
+
+                boolean isValid = answer.startsWith("YES");
+                log.info("[AI Guard] Slot={}, Answer='{}', Valid={}", slotType, answer, isValid);
+
+                if (isValid) {
+                    return Map.of("valid", true, "message", "Ảnh hợp lệ.");
+                } else {
+                    String errorMsg = SLOT_ERROR_MESSAGES.getOrDefault(slotType,
+                        "Ảnh chưa đúng yêu cầu, vui lòng chụp lại.");
+                    return Map.of("valid", false, "message", errorMsg);
+                }
+            }
+        } catch (ResponseStatusException rse) {
+            // Nếu AI service down → cho qua, không block người dùng
+            log.warn("[AI Guard] AI service lỗi, bỏ qua validation: {}", rse.getMessage());
+            return Map.of("valid", true, "message", "Bỏ qua kiểm tra (AI tạm thời không khả dụng).");
+        } catch (Exception e) {
+            log.warn("[AI Guard] Lỗi validate slot {}: {}", slotType, e.getMessage());
+            return Map.of("valid", true, "message", "Bỏ qua kiểm tra.");
+        }
+
+        return Map.of("valid", true, "message", "Ảnh được chấp nhận.");
     }
 }
+

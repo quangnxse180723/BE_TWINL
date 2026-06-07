@@ -35,4 +35,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
 	@Query("select coalesce(sum(o.totalAmount), 0) from Order o")
 	BigDecimal sumTotalAmount();
+
+    /** Dùng để tra cứu đơn hàng PayOS theo orderCode số (được lưu vào paymentTxnRef) */
+    Optional<Order> findByPaymentTxnRef(String paymentTxnRef);
 }

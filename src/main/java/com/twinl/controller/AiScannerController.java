@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/ai")
@@ -36,7 +37,7 @@ public class AiScannerController {
 
     /**
      * POST /api/v1/ai/legit-check
-     * @param files up to 3 images (overall front, logo close-up, tag/label)
+     * @param files up to 4 images (front, logo, neckTag, washTag)
      */
     @PostMapping("/legit-check")
     public ResponseEntity<LegitCheckResponse> checkLegit(
@@ -44,6 +45,7 @@ public class AiScannerController {
     ) {
         return ResponseEntity.ok(aiScannerService.checkLegit(files));
     }
+
     @PostMapping("/image-quality")
     public ResponseEntity<ImageQualityCheckResponse> checkImageQuality(
             @RequestParam("file") MultipartFile file
@@ -57,4 +59,23 @@ public class AiScannerController {
     ) {
         return ResponseEntity.ok(aiScannerService.autoFillFromImages(files));
     }
+
+    /**
+     * POST /api/v1/ai/validate-slot
+     *
+     * AI Guard: Dùng Gemini Flash để kiểm tra xem ảnh có đúng loại không.
+     * Frontend gọi ngay sau khi user chọn ảnh (before full legit check).
+     *
+     * @param file     File ảnh vừa chọn
+     * @param slotType "front" | "logo" | "neckTag" | "washTag"
+     * @return { "valid": true/false, "message": "Thông báo thân thiện" }
+     */
+    @PostMapping("/validate-slot")
+    public ResponseEntity<Map<String, Object>> validateSlot(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("slotType") String slotType
+    ) {
+        return ResponseEntity.ok(aiScannerService.validateImageSlot(file, slotType));
+    }
 }
+

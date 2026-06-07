@@ -1,5 +1,8 @@
 package com.twinl.service.impl;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.twinl.config.SepayProperties;
 import com.twinl.config.VnpayProperties;
 import com.twinl.dto.response.PaymentCreateResponse;
 import com.twinl.dto.response.VnpayIpnResponse;
@@ -20,16 +23,20 @@ import com.twinl.repository.UserRepository;
 import com.twinl.service.PaymentService;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-import java.math.RoundingMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,20 +52,24 @@ public class PaymentServiceImpl implements PaymentService {
     private static final DateTimeFormatter VNPAY_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
     private final VnpayProperties vnpayProperties;
+    private final SepayProperties sepayProperties;
     private final OrderRepository orderRepository;
     private final CartRepository cartRepository;
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     private static final Logger log = LoggerFactory.getLogger(PaymentServiceImpl.class);
 
     public PaymentServiceImpl(
             VnpayProperties vnpayProperties,
+            SepayProperties sepayProperties,
             OrderRepository orderRepository,
             CartRepository cartRepository,
             UserRepository userRepository,
             ProductRepository productRepository) {
         this.vnpayProperties = vnpayProperties;
+        this.sepayProperties = sepayProperties;
         this.orderRepository = orderRepository;
         this.cartRepository = cartRepository;
         this.userRepository = userRepository;
@@ -194,7 +205,12 @@ public class PaymentServiceImpl implements PaymentService {
                 isSuccess);
     }
 
+    /** Build order from cart – shared between VNPay and PayOS flows */
     private Order buildOrderFromCart(User user, Cart cart) {
+        return buildOrderFromCart(user, cart, PaymentMethod.VNPAY);
+    }
+
+    private Order buildOrderFromCart(User user, Cart cart, PaymentMethod paymentMethod) {
         BigDecimal totalAmount = calculateCartTotal(cart);
         String orderCode = generateOrderCode();
 
@@ -204,13 +220,13 @@ public class PaymentServiceImpl implements PaymentService {
                 .customerEmail(user.getEmail())
                 .customerPhone(user.getPhone())
                 .shippingAddress(user.getAddress())
-            .shippingWardCode(user.getWardCode())
-            .shippingDistrictId(user.getDistrictId())
-            .shippingProvinceId(user.getProvinceId())
+                .shippingWardCode(user.getWardCode())
+                .shippingDistrictId(user.getDistrictId())
+                .shippingProvinceId(user.getProvinceId())
                 .status(OrderStatus.PENDING)
                 .totalAmount(totalAmount)
                 .user(user)
-                .paymentMethod(PaymentMethod.VNPAY)
+                .paymentMethod(paymentMethod)
                 .paymentStatus(PaymentStatus.PENDING)
                 .paymentTxnRef(orderCode)
                 .build();
@@ -321,6 +337,126 @@ public class PaymentServiceImpl implements PaymentService {
 
     private String generateOrderCode() {
         return "TWINL" + System.currentTimeMillis();
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  SEPAY – Tiền thật (VietQR)
+    // ══════════════════════════════════════════════════════════════
+
+    @Override
+    public PaymentCreateResponse createSepayPayment() {
+        User user = getCurrentAuthenticatedUser();
+        validateUserProfile(user);
+
+        Cart cart = cartRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cart is empty"));
+        if (cart.getItems() == null || cart.getItems().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cart is empty");
+        }
+
+        Order order = buildOrderFromCart(user, cart, PaymentMethod.SEPAY);
+        Order saved = orderRepository.save(order);
+
+        try {
+            int totalAmount = saved.getTotalAmount().intValue();
+            String bankId = sepayProperties.getBankId();
+            String accountNumber = sepayProperties.getAccountNumber();
+            String orderCode = saved.getCode();
+
+            // Link trang thanh toán của SePay (Checkout Page)
+            String paymentUrl = String.format("https://qr.sepay.vn/img?bank=%s&acc=%s&amount=%d&des=%s",
+                    bankId, accountNumber, totalAmount, orderCode);
+
+            log.info("[SEPAY] Tạo link thanh toán thành công cho đơn {}", saved.getCode());
+
+            return PaymentCreateResponse.builder()
+                    .orderId(saved.getId())
+                    .orderCode(saved.getCode())
+                    .paymentUrl(paymentUrl)
+                    .build();
+
+        } catch (Exception e) {
+            log.error("[SEPAY] Lỗi tạo link thanh toán: {}", e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Không thể tạo liên kết thanh toán SePay: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Xử lý Webhook từ SePay.
+     * SePay gửi HTTP POST với body JSON và header Authorization.
+     */
+    @Override
+    public void handleSepayWebhook(String rawBody) {
+        try {
+            JsonNode root = objectMapper.readTree(rawBody);
+            
+            int transferAmount = root.path("transferAmount").asInt(0);
+            String content = root.path("content").asText("");
+            String referenceCode = root.path("referenceCode").asText("");
+            
+            // Bỏ qua giao dịch chuyển tiền ra (out)
+            if ("out".equals(root.path("transferType").asText(""))) {
+                return;
+            }
+
+            // Tìm Mã đơn hàng (Format: TWINL...) trong nội dung chuyển khoản
+            Pattern pattern = Pattern.compile("(TWINL\\d+)");
+            Matcher matcher = pattern.matcher(content);
+            
+            if (!matcher.find()) {
+                log.warn("[SEPAY Webhook] Không tìm thấy mã đơn hàng TWINL trong nội dung: {}", content);
+                return;
+            }
+            
+            String orderCode = matcher.group(1);
+
+            // Tìm đơn hàng theo mã
+            Order order = orderRepository.findByCode(orderCode)
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.NOT_FOUND, "Order not found for code: " + orderCode));
+
+            // Đã thanh toán rồi thì bỏ qua
+            if (order.getPaymentStatus() == PaymentStatus.SUCCESS) {
+                log.info("[SEPAY Webhook] Đơn {} đã được thanh toán trước đó. Bỏ qua.", order.getCode());
+                return;
+            }
+
+            // Kiểm tra số tiền chuyển có đủ không (Cho phép chuyển dư)
+            int orderTotal = order.getTotalAmount().intValue();
+            if (transferAmount < orderTotal) {
+                log.warn("[SEPAY Webhook] Đơn {} chuyển thiếu tiền. Yêu cầu: {}, Nhận: {}", order.getCode(), orderTotal, transferAmount);
+                return; // Có thể lưu trạng thái PARTIAL_PAID nếu thiết kế
+            }
+
+            // Cập nhật trạng thái đơn hàng
+            order.setPaymentStatus(PaymentStatus.SUCCESS);
+            order.setStatus(OrderStatus.PENDING);
+            order.setPaymentPaidAt(LocalDateTime.now());
+            order.setPaymentTransactionNo(referenceCode);
+
+            // Trừ tồn kho
+            for (OrderItem item : order.getItems()) {
+                Product product = item.getProduct();
+                if (product != null && product.getStock() != null) {
+                    int newStock = product.getStock() - item.getQuantity();
+                    product.setStock(Math.max(newStock, 0));
+                    productRepository.save(product);
+                }
+            }
+
+            // Xóa giỏ hàng sau khi thanh toán thành công
+            clearCart(order);
+            orderRepository.save(order);
+
+            log.info("[SEPAY Webhook] Đơn hàng {} đã thanh toán thành công (SePay).", order.getCode());
+
+        } catch (ResponseStatusException ex) {
+            throw ex;
+        } catch (Exception e) {
+            log.error("[SEPAY Webhook] Lỗi xử lý webhook: {}", e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid SePay webhook: " + e.getMessage());
+        }
     }
 
     private void validateUserProfile(User user) {

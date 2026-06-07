@@ -51,7 +51,10 @@ public class SecurityConfig {
 						.requestMatchers(HttpMethod.POST, "/api/v1/ai/scan").permitAll()
 						.requestMatchers(HttpMethod.POST, "/api/v1/ai/legit-check").permitAll()
 						.requestMatchers(HttpMethod.POST, "/api/v1/ai/image-quality", "/api/v1/ai/autofill").permitAll()
+						.requestMatchers(HttpMethod.POST, "/api/v1/ai/validate-slot").permitAll()
 						.requestMatchers("/api/payments/vnpay/return", "/api/payments/vnpay/ipn").permitAll()
+						// SePay Webhook – không cần JWT, bảo mật bằng Checksum Key
+						.requestMatchers(HttpMethod.POST, "/api/v1/payment/sepay-webhook").permitAll()
 						.requestMatchers(HttpMethod.GET, "/api/categories", "/api/colors").permitAll()
 
 						// In-house Shipper endpoints
