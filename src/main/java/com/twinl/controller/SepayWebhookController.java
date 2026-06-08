@@ -32,16 +32,18 @@ public class SepayWebhookController {
     }
 
     @PostMapping("/sepay-webhook")
-    public ResponseEntity<Map<String, String>> handleSepayWebhook(
-            @RequestHeader(value = "X-Sepay-Signature", required = false) String signature,
-            @RequestBody String rawBody) {
+    public ResponseEntity<?> handleSepayWebhook(
+            @RequestBody String rawBody,
+            @RequestHeader(value = "Authorization", required = false) String authorization
+    ) {
+        log.info("[SEPAY Webhook] Nhận webhook từ SePay. Auth: {}", authorization);
+        log.info("[SEPAY Webhook] RawBody received: {}", rawBody);
 
-        log.info("[SEPAY Webhook] Nhận webhook từ SePay. Signature: {}", signature);
-
-        // Xác thực chữ ký HMAC-SHA256
         String secretKey = sepayProperties.getWebhookToken();
-        if (!isValidHmacSignature(rawBody, signature, secretKey)) {
-            log.warn("[SEPAY Webhook] Từ chối truy cập: Sai chữ ký HMAC-SHA256. Received: {}", signature);
+        
+        // Kiểm tra API Key
+        if (authorization == null || !authorization.equals("Apikey " + secretKey)) {
+            log.warn("[SEPAY Webhook] Từ chối truy cập: Sai API Key.");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("success", "false", "message", "Unauthorized"));
         }
@@ -52,40 +54,6 @@ public class SepayWebhookController {
         } catch (Exception e) {
             log.error("[SEPAY Webhook] Xử lý thất bại: {}", e.getMessage(), e);
             return ResponseEntity.ok(Map.of("success", "false", "message", e.getMessage()));
-        }
-    }
-
-    /**
-     * Tính HMAC-SHA256 của rawBody bằng secretKey và so sánh với signature nhận được.
-     */
-    private boolean isValidHmacSignature(String rawBody, String signature, String secretKey) {
-        if (signature == null || signature.isBlank()) {
-            log.warn("[SEPAY Webhook] Không có X-Sepay-Signature header!");
-            return false;
-        }
-        try {
-            Mac mac = Mac.getInstance("HmacSHA256");
-            SecretKeySpec keySpec = new SecretKeySpec(
-                    secretKey.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
-            mac.init(keySpec);
-            byte[] hmacBytes = mac.doFinal(rawBody.getBytes(StandardCharsets.UTF_8));
-
-            // Chuyển sang chuỗi hex lowercase
-            StringBuilder hex = new StringBuilder();
-            for (byte b : hmacBytes) {
-                hex.append(String.format("%02x", b));
-            }
-            String computed = hex.toString();
-            boolean valid = computed.equalsIgnoreCase(signature.replace("sha256=", ""));
-            if (!valid) {
-                log.warn("[SEPAY Webhook] Chữ ký không khớp. Expected: {}, Got: {}", computed, signature);
-                log.warn("[SEPAY Webhook] RawBody received: {}", rawBody);
-                // TODO: Fix HMAC verification. Temporarily returning true so webhook succeeds.
-            }
-            return true;
-        } catch (Exception e) {
-            log.error("[SEPAY Webhook] Lỗi xác thực HMAC: {}", e.getMessage());
-            return true;
         }
     }
 }
