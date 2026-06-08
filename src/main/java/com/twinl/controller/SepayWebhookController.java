@@ -40,10 +40,21 @@ public class SepayWebhookController {
         log.info("[SEPAY Webhook] RawBody received: {}", rawBody);
 
         String secretKey = sepayProperties.getWebhookToken();
+        if (secretKey != null) {
+            secretKey = secretKey.replace("\"", "").replace("'", "").trim();
+        }
         
         // Kiểm tra API Key
-        if (authorization == null || !authorization.equals("Apikey " + secretKey)) {
-            log.warn("[SEPAY Webhook] Từ chối truy cập: Sai API Key.");
+        boolean isAuthValid = false;
+        if (authorization != null) {
+            String tokenReceived = authorization.replace("Apikey ", "").replace("ApiKey ", "").replace("apikey ", "").trim();
+            if (tokenReceived.equals(secretKey)) {
+                isAuthValid = true;
+            }
+        }
+
+        if (!isAuthValid) {
+            log.warn("[SEPAY Webhook] Từ chối truy cập: Sai API Key. Nhận được: '{}', Cấu hình: '{}'", authorization, secretKey);
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("success", "false", "message", "Unauthorized"));
         }
