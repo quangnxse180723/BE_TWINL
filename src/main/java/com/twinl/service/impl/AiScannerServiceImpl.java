@@ -35,15 +35,15 @@ public class AiScannerServiceImpl implements AiScannerService {
     private String geminiApiKey;
 
     // Model nhanh: dùng cho INFO_CHECK (tra cứu & tìm kiếm)
-    private static final String MODEL_FLASH = "gemini-2.5-flash";
+    private static final String MODEL_FLASH = "gemini-3.1-flash-lite";
 
     // Model sâu: dùng cho SELL_LISTING (viết mô tả bán hàng)
-    private static final String MODEL_PRO   = "gemini-2.5-pro";
+    private static final String MODEL_PRO   = "gemini-3.1-pro";
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
-    public AiScanResultResponse scanImage(MultipartFile file, AiScanType type) {
+    public AiScanResultResponse scanImage(List<MultipartFile> files, AiScanType type) {
         if (geminiApiKey == null || geminiApiKey.isEmpty()) {
             log.error("Chưa cấu hình API Key");
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
@@ -61,24 +61,30 @@ public class AiScannerServiceImpl implements AiScannerService {
         log.info("AI Scan type={}, model={}", type, modelId);
 
         try {
-            String base64Image = Base64.getEncoder().encodeToString(file.getBytes());
-            String mimeType = file.getContentType() != null ? file.getContentType() : "image/jpeg";
-
             String prompt = buildPrompt(type);
 
-            // Construct payload for Gemini
-            Map<String, Object> inlineData = new HashMap<>();
-            inlineData.put("mimeType", mimeType);
-            inlineData.put("data", base64Image);
-
-            Map<String, Object> partImage = new HashMap<>();
-            partImage.put("inlineData", inlineData);
-
+            List<Map<String, Object>> parts = new java.util.ArrayList<>();
             Map<String, Object> partText = new HashMap<>();
             partText.put("text", prompt);
+            parts.add(partText);
+
+            int imageCount = Math.min(files == null ? 0 : files.size(), 6);
+            for (int i = 0; i < imageCount; i++) {
+                MultipartFile f = files.get(i);
+                String base64Image = Base64.getEncoder().encodeToString(f.getBytes());
+                String mimeType = f.getContentType() != null ? f.getContentType() : "image/jpeg";
+
+                Map<String, Object> inlineData = new HashMap<>();
+                inlineData.put("mimeType", mimeType);
+                inlineData.put("data", base64Image);
+
+                Map<String, Object> partImage = new HashMap<>();
+                partImage.put("inlineData", inlineData);
+                parts.add(partImage);
+            }
 
             Map<String, Object> content = new HashMap<>();
-            content.put("parts", List.of(partText, partImage));
+            content.put("parts", parts);
 
             Map<String, Object> requestBody = new HashMap<>();
             requestBody.put("contents", List.of(content));
@@ -373,7 +379,7 @@ public class AiScannerServiceImpl implements AiScannerService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
-        String[] fallbackModels = { MODEL_FLASH, "gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest" };
+        String[] fallbackModels = { MODEL_FLASH, "gemini-3.1-flash-lite", "gemini-2.0-flash", "gemini-1.5-flash-latest" };
         String lastError = "";
         for (String mId : fallbackModels) {
             try {
@@ -400,18 +406,22 @@ public class AiScannerServiceImpl implements AiScannerService {
 
     /** Mô tả tiếng Việt cho từng slot – dùng trong prompt gửi cho AI */
     private static final Map<String, String> SLOT_DESCRIPTIONS = Map.of(
-        "front",   "ảnh chụp toàn thân mặt trước của một sản phẩm thời trang (quần áo, giày, túi xách)",
-        "logo",    "ảnh chụp cận cảnh logo hoặc họa tiết thương hiệu trên sản phẩm thời trang",
-        "neckTag", "ảnh chụp cận cảnh mác cổ áo (neck tag/care label) của sản phẩm thời trang – thấy rõ chữ in trên mác",
-        "washTag", "ảnh chụp cận cảnh mác giặt hoặc mác thông tin (wash tag/inner label) của sản phẩm thời trang"
+        "front",   "ảnh chụp toàn thân mặt trước của một sản phẩm thời trang (áo, quần, váy, túi xách, giày...)",
+        "back",    "ảnh chụp toàn thân mặt sau của một sản phẩm thời trang",
+        "tag",     "ảnh chụp cận cảnh mác thương hiệu, logo hoặc mác size của sản phẩm thời trang",
+        "opt1",    "ảnh chụp chi tiết sản phẩm thời trang",
+        "opt2",    "ảnh chụp chi tiết sản phẩm thời trang",
+        "opt3",    "ảnh chụp chi tiết sản phẩm thời trang"
     );
 
     /** Thông báo lỗi thân thiện khi ảnh sai slot */
     private static final Map<String, String> SLOT_ERROR_MESSAGES = Map.of(
-        "front",   "Ảnh ô số 1 chưa đúng! Vui lòng chụp toàn thân mặt trước sản phẩm, đủ sáng và rõ nét.",
-        "logo",    "Ảnh ô số 2 chưa đúng! Vui lòng chụp cận cảnh Logo/họa tiết thương hiệu, tránh bị mờ hoặc quá xa.",
-        "neckTag", "Ảnh ô số 3 chưa đúng! Vui lòng chụp cận cảnh mác cổ áo (neck tag) – chữ trên mác phải đọc được.",
-        "washTag", "Ảnh ô số 4 chưa đúng! Vui lòng chụp cận cảnh mác giặt/mác thông tin bên trong sản phẩm."
+        "front",   "Ảnh ô số 1 chưa đúng! Vui lòng chụp toàn thân mặt trước sản phẩm.",
+        "back",    "Ảnh ô số 2 chưa đúng! Vui lòng chụp mặt sau sản phẩm.",
+        "tag",     "Ảnh ô số 3 chưa đúng! Vui lòng chụp cận cảnh mác thương hiệu, logo hoặc size.",
+        "opt1",    "Ảnh phụ 1 chưa rõ ràng.",
+        "opt2",    "Ảnh phụ 2 chưa rõ ràng.",
+        "opt3",    "Ảnh phụ 3 chưa rõ ràng."
     );
 
     @Override

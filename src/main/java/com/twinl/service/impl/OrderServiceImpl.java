@@ -205,6 +205,7 @@ public class OrderServiceImpl implements OrderService {
 				.map(item -> OrderItemResponse.builder()
 						.productId(item.getProduct() != null ? item.getProduct().getId() : null)
 						.productName(item.getProduct() != null ? item.getProduct().getName() : null)
+						.imageUrl(item.getProduct() != null && item.getProduct().getImageUrls() != null && !item.getProduct().getImageUrls().isEmpty() ? item.getProduct().getImageUrls().get(0) : null)
 						.quantity(item.getQuantity())
 						.unitPrice(item.getUnitPrice())
 						.lineTotal(item.getLineTotal())

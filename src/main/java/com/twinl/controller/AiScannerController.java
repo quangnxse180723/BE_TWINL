@@ -29,10 +29,10 @@ public class AiScannerController {
      */
     @PostMapping("/scan")
     public ResponseEntity<AiScanResultResponse> scanImage(
-            @RequestParam("file") MultipartFile file,
+            @RequestParam("files") List<MultipartFile> files,
             @RequestParam(value = "type", defaultValue = "INFO_CHECK") AiScanType type
     ) {
-        return ResponseEntity.ok(aiScannerService.scanImage(file, type));
+        return ResponseEntity.ok(aiScannerService.scanImage(files, type));
     }
 
     /**

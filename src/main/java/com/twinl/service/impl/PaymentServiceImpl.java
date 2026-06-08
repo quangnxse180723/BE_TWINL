@@ -361,11 +361,12 @@ public class PaymentServiceImpl implements PaymentService {
             int totalAmount = saved.getTotalAmount().intValue();
             String bankId = sepayProperties.getBankId();
             String accountNumber = sepayProperties.getAccountNumber();
+            String accountName = java.net.URLEncoder.encode(sepayProperties.getAccountName(), java.nio.charset.StandardCharsets.UTF_8);
             String orderCode = saved.getCode();
 
             // Link trang thanh toán của SePay (Checkout Page)
-            String paymentUrl = String.format("https://qr.sepay.vn/img?bank=%s&acc=%s&amount=%d&des=%s",
-                    bankId, accountNumber, totalAmount, orderCode);
+            String paymentUrl = String.format("https://qr.sepay.vn/img?bank=%s&acc=%s&amount=%d&des=%s&accountName=%s",
+                    bankId, accountNumber, totalAmount, orderCode, accountName);
 
             log.info("[SEPAY] Tạo link thanh toán thành công cho đơn {}", saved.getCode());
 

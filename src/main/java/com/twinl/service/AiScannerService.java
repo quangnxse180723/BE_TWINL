@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Map;
 
 public interface AiScannerService {
-    AiScanResultResponse scanImage(MultipartFile file, AiScanType type);
+    AiScanResultResponse scanImage(List<MultipartFile> files, AiScanType type);
     LegitCheckResponse checkLegit(List<MultipartFile> files);
     ImageQualityCheckResponse checkImageQuality(MultipartFile file);
     AiAutoFillResponse autoFillFromImages(List<MultipartFile> files);
