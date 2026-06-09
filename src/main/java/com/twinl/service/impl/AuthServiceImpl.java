@@ -23,7 +23,14 @@ import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
-
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.gson.GsonFactory;
+import com.twinl.dto.request.GoogleLoginRequest;
+import org.springframework.beans.factory.annotation.Value;
+import java.util.Collections;
+import java.util.UUID;
 @Service
 public class AuthServiceImpl implements AuthService {
 	private final UserRepository userRepository;
@@ -129,6 +136,60 @@ public class AuthServiceImpl implements AuthService {
 				.tokenType("Bearer")
 				.user(toUserResponse(user))
 				.build();
+	}
+
+	@Value("${google.client.id:YOUR_GOOGLE_CLIENT_ID}")
+	private String googleClientId;
+
+	@Override
+	public AuthResponse googleLogin(GoogleLoginRequest request) {
+		try {
+			GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), new GsonFactory())
+					.setAudience(Collections.singletonList(googleClientId))
+					.build();
+
+			GoogleIdToken idToken = verifier.verify(request.getIdToken());
+			if (idToken != null) {
+				GoogleIdToken.Payload payload = idToken.getPayload();
+				String email = payload.getEmail();
+				String name = (String) payload.get("name");
+				String pictureUrl = (String) payload.get("picture");
+
+				User user = userRepository.findByEmail(email).orElse(null);
+				if (user == null) {
+					Role userRole = roleRepository.findByName(RoleName.USER)
+							.orElseGet(() -> roleRepository.save(Role.builder().name(RoleName.USER).build()));
+
+					user = User.builder()
+							.email(email)
+							.displayName(name)
+							.avatarUrl(pictureUrl)
+							.password(passwordEncoder.encode(UUID.randomUUID().toString())) // Random password for google users
+							.build();
+					user.getRoles().add(userRole);
+					user = userRepository.save(user);
+				}
+
+				boolean isActive = user.getActive() == null || Boolean.TRUE.equals(user.getActive());
+				if (!isActive) {
+					analyticsService.logAccess(httpServletRequest, "FAILED", user.getId());
+					throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Tài khoản của bạn đã bị khóa.");
+				}
+
+				analyticsService.logAccess(httpServletRequest, "SUCCESS", user.getId());
+				String token = jwtService.generateToken(user);
+
+				return AuthResponse.builder()
+						.accessToken(token)
+						.tokenType("Bearer")
+						.user(toUserResponse(user))
+						.build();
+			} else {
+				throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid ID token.");
+			}
+		} catch (Exception e) {
+			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Google login failed: " + e.getMessage());
+		}
 	}
 
 	private UserResponse toUserResponse(User user) {

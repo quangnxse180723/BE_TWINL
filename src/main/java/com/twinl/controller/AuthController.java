@@ -31,6 +31,11 @@ public class AuthController {
 		return ResponseEntity.ok(authService.login(request));
 	}
 
+	@PostMapping("/google")
+	public ResponseEntity<AuthResponse> googleLogin(@Valid @RequestBody com.twinl.dto.request.GoogleLoginRequest request) {
+		return ResponseEntity.ok(authService.googleLogin(request));
+	}
+
 	@PostMapping("/logout")
 	public ResponseEntity<Void> logout() {
 		return ResponseEntity.noContent().build();
