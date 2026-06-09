@@ -162,7 +162,7 @@ public class AuthServiceImpl implements AuthService {
 
 					user = User.builder()
 							.email(email)
-							.displayName(name)
+							.displayName(name != null && !name.isEmpty() ? name : "Người dùng Google")
 							.avatarUrl(pictureUrl)
 							.password(passwordEncoder.encode(UUID.randomUUID().toString())) // Random password for google users
 							.build();
