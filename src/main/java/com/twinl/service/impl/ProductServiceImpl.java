@@ -64,6 +64,8 @@ public class ProductServiceImpl implements ProductService {
 			Boolean inStock,
 			String minPrice,
 			String maxPrice,
+			String style,
+			String excludeStyle,
 			int page,
 			int sizePage
 	) {
@@ -112,6 +114,17 @@ public class ProductServiceImpl implements ProductService {
 
 		if (max.isPresent()) {
 			spec = spec.and((root, query, cb) -> cb.lessThanOrEqualTo(root.get("price"), max.get()));
+		}
+
+		if (style != null && !style.isBlank()) {
+			spec = spec.and((root, query, cb) -> cb.equal(root.get("style"), style));
+		}
+
+		if (excludeStyle != null && !excludeStyle.isBlank()) {
+			spec = spec.and((root, query, cb) -> cb.or(
+					cb.notEqual(root.get("style"), excludeStyle),
+					cb.isNull(root.get("style"))
+			));
 		}
 
 		PageRequest pageable = PageRequest.of(page, sizePage, Sort.by("createdAt").descending());

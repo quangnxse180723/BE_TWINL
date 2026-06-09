@@ -39,6 +39,8 @@ public class ProductController {
 			@RequestParam(required = false) Boolean inStock,
 			@RequestParam(required = false) String minPrice,
 			@RequestParam(required = false) String maxPrice,
+			@RequestParam(required = false) String style,
+			@RequestParam(required = false) String excludeStyle,
 			@RequestParam(defaultValue = "0") int page,
 			@RequestParam(defaultValue = "12") int sizePage
 	) {
@@ -52,6 +54,8 @@ public class ProductController {
 				inStock,
 				minPrice,
 				maxPrice,
+				style,
+				excludeStyle,
 				page,
 				sizePage
 		));

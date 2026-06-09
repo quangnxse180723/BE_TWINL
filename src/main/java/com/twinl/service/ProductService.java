@@ -17,6 +17,8 @@ public interface ProductService {
 			Boolean inStock,
 			String minPrice,
 			String maxPrice,
+			String style,
+			String excludeStyle,
 			int page,
 			int sizePage
 	);
