@@ -23,10 +23,6 @@ import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
-import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
-import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
-import com.google.api.client.http.javanet.NetHttpTransport;
-import com.google.api.client.json.gson.GsonFactory;
 import com.twinl.dto.request.GoogleLoginRequest;
 import org.springframework.beans.factory.annotation.Value;
 import java.util.Collections;
@@ -144,14 +140,21 @@ public class AuthServiceImpl implements AuthService {
 	@Override
 	public AuthResponse googleLogin(GoogleLoginRequest request) {
 		try {
-			GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), new GsonFactory())
-					.setAudience(Collections.singletonList(googleClientId))
-					.build();
+			org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
+			org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+			headers.setBearerAuth(request.getIdToken()); // The FE sends the access_token in idToken field
+			org.springframework.http.HttpEntity<String> entity = new org.springframework.http.HttpEntity<>("parameters", headers);
+			
+			org.springframework.http.ResponseEntity<java.util.Map> response = restTemplate.exchange(
+					"https://www.googleapis.com/oauth2/v3/userinfo", 
+					org.springframework.http.HttpMethod.GET, 
+					entity, 
+					java.util.Map.class
+			);
 
-			GoogleIdToken idToken = verifier.verify(request.getIdToken());
-			if (idToken != null) {
-				GoogleIdToken.Payload payload = idToken.getPayload();
-				String email = payload.getEmail();
+			if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+				java.util.Map<String, Object> payload = response.getBody();
+				String email = (String) payload.get("email");
 				String name = (String) payload.get("name");
 				String pictureUrl = (String) payload.get("picture");
 
