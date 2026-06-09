@@ -81,6 +81,16 @@ public class UserServiceImpl implements UserService {
 	}
 
 	@Override
+	public void changePassword(com.twinl.dto.request.ChangePasswordRequest request) {
+		User user = getCurrentAuthenticatedUser();
+		if (!passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mật khẩu cũ không chính xác");
+		}
+		user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+		userRepository.save(user);
+	}
+
+	@Override
 	public UserResponse updateAvatar(MultipartFile file) {
 		if (file == null || file.isEmpty()) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "File is required");

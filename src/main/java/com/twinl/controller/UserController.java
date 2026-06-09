@@ -44,6 +44,12 @@ public class UserController {
 		return ResponseEntity.ok(userService.updateAvatar(file));
 	}
 
+	@PutMapping("/me/password")
+	public ResponseEntity<Void> changePassword(@Valid @RequestBody com.twinl.dto.request.ChangePasswordRequest request) {
+		userService.changePassword(request);
+		return ResponseEntity.ok().build();
+	}
+
 	@GetMapping
 	public ResponseEntity<List<UserResponse>> getAllUsers() {
 		return ResponseEntity.ok(userService.getAllUsers());
