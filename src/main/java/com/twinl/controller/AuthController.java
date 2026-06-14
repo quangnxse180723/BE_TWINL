@@ -21,6 +21,12 @@ public class AuthController {
 		this.authService = authService;
 	}
 
+	@PostMapping("/send-otp")
+	public ResponseEntity<Void> sendOtp(@Valid @RequestBody com.twinl.dto.request.SendOtpRequest request) {
+		authService.sendOtp(request);
+		return ResponseEntity.ok().build();
+	}
+
 	@PostMapping("/register")
 	public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
 		return ResponseEntity.status(HttpStatus.CREATED).body(authService.register(request));

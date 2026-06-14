@@ -36,6 +36,8 @@ public class AuthServiceImpl implements AuthService {
 	private final JwtService jwtService;
 	private final HttpServletRequest httpServletRequest;
 	private final AnalyticsService analyticsService;
+	private final com.twinl.repository.OtpRepository otpRepository;
+	private final com.twinl.service.EmailService emailService;
 
 	public AuthServiceImpl(
 			UserRepository userRepository,
@@ -44,7 +46,9 @@ public class AuthServiceImpl implements AuthService {
 			AuthenticationManager authenticationManager,
 			JwtService jwtService,
 			HttpServletRequest httpServletRequest,
-			AnalyticsService analyticsService
+			AnalyticsService analyticsService,
+			com.twinl.repository.OtpRepository otpRepository,
+			com.twinl.service.EmailService emailService
 	) {
 		this.userRepository = userRepository;
 		this.roleRepository = roleRepository;
@@ -53,12 +57,44 @@ public class AuthServiceImpl implements AuthService {
 		this.jwtService = jwtService;
 		this.httpServletRequest = httpServletRequest;
 		this.analyticsService = analyticsService;
+		this.otpRepository = otpRepository;
+		this.emailService = emailService;
+	}
+
+	@Override
+	public void sendOtp(com.twinl.dto.request.SendOtpRequest request) {
+		if (userRepository.existsByEmail(request.getEmail())) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT, "Email đã được sử dụng");
+		}
+		
+		String otpCode = String.format("%06d", new java.util.Random().nextInt(999999));
+		java.time.LocalDateTime expiresAt = java.time.LocalDateTime.now().plusMinutes(5);
+
+		com.twinl.entity.OtpEntity otpEntity = otpRepository.findByEmail(request.getEmail())
+				.orElse(new com.twinl.entity.OtpEntity());
+		otpEntity.setEmail(request.getEmail());
+		otpEntity.setOtpCode(otpCode);
+		otpEntity.setExpiresAt(expiresAt);
+		otpRepository.save(otpEntity);
+
+		emailService.sendOtpEmail(request.getEmail(), otpCode);
 	}
 
 	@Override
 	public AuthResponse register(RegisterRequest request) {
 		if (userRepository.existsByEmail(request.getEmail())) {
 			throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already exists");
+		}
+
+		com.twinl.entity.OtpEntity otpEntity = otpRepository.findByEmail(request.getEmail())
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mã OTP không hợp lệ hoặc chưa được gửi"));
+
+		if (!otpEntity.getOtpCode().equals(request.getOtp())) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mã OTP không chính xác");
+		}
+
+		if (otpEntity.getExpiresAt().isBefore(java.time.LocalDateTime.now())) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mã OTP đã hết hạn");
 		}
 
 		Role userRole = roleRepository.findByName(RoleName.USER)
@@ -72,6 +108,8 @@ public class AuthServiceImpl implements AuthService {
 		user.getRoles().add(userRole);
 
 		User savedUser = userRepository.save(user);
+		otpRepository.delete(otpEntity);
+
 		String token = jwtService.generateToken(savedUser);
 
 		return AuthResponse.builder()

@@ -19,4 +19,7 @@ public class RegisterRequest {
 	@Size(min = 6, message = "Mật khẩu tối thiểu là 6 ký tự")
 	@NotBlank(message = "Mật khẩu không được để trống")
 	private String password;
+
+	@NotBlank(message = "Mã OTP không được để trống")
+	private String otp;
 }

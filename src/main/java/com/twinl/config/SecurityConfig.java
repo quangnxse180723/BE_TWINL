@@ -45,6 +45,7 @@ public class SecurityConfig {
 						.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 						// Public endpoints
 						.requestMatchers("/api/auth/**").permitAll()
+						.requestMatchers("/error").permitAll()
 						.requestMatchers("/uploads/**").permitAll()
 						.requestMatchers(HttpMethod.POST, "/api/contact").permitAll()
 						.requestMatchers(HttpMethod.POST, "/api/v1/analytics/track").permitAll()

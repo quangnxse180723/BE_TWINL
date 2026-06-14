@@ -2,8 +2,6 @@ package com.twinl.service;
 
 import com.twinl.entity.Order;
 import com.twinl.entity.OrderStatus;
-import com.twinl.entity.Product;
-import com.twinl.entity.User;
 import com.twinl.entity.Wallet;
 import com.twinl.repository.OrderRepository;
 import com.twinl.repository.ProductRepository;
