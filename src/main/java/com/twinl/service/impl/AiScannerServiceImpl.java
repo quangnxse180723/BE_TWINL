@@ -407,7 +407,7 @@ public class AiScannerServiceImpl implements AiScannerService {
     /** Mô tả tiếng Việt cho từng slot – dùng trong prompt gửi cho AI */
     private static final Map<String, String> SLOT_DESCRIPTIONS = Map.of(
         "front",   "ảnh chụp toàn thân mặt trước của một sản phẩm thời trang (áo, quần, váy, túi xách, giày...)",
-        "back",    "ảnh chụp toàn thân mặt sau của một sản phẩm thời trang",
+        "back",    "ảnh chụp toàn thân mặt sau của một sản phẩm thời trang (lưu ý: đối với một số loại áo, váy, mặt sau có thể trông rất giống mặt trước. Hãy trả lời YES nếu nó là hình ảnh của quần áo/phụ kiện)",
         "tag",     "ảnh chụp cận cảnh mác thương hiệu, logo hoặc mác size của sản phẩm thời trang",
         "opt1",    "ảnh chụp chi tiết sản phẩm thời trang",
         "opt2",    "ảnh chụp chi tiết sản phẩm thời trang",
