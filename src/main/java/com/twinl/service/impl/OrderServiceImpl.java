@@ -66,6 +66,73 @@ public class OrderServiceImpl implements OrderService {
 	}
 
 	@Override
+	@Transactional
+	public OrderResponse confirmReceipt(Long orderId) {
+		Order order = getOrderById(orderId);
+		User currentUser = getCurrentAuthenticatedUser();
+		if (!order.getUser().getId().equals(currentUser.getId())) {
+			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền thực hiện hành động này.");
+		}
+		if (order.getStatus() != OrderStatus.DELIVERED) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Chỉ có thể xác nhận khi đơn hàng đã được giao.");
+		}
+		
+		order.setStatus(OrderStatus.COMPLETED);
+		orderRepository.save(order);
+		
+		// Giải ngân cho seller ngay lập tức
+		try {
+			walletService.releaseEscrow(order);
+			order.setEscrowReleased(true);
+			orderRepository.save(order);
+		} catch (Exception e) {
+			log.error("Lỗi giải ngân khi khách hàng xác nhận: ", e);
+		}
+		
+		notificationService.sendNotification(
+			order.getUser(), 
+			"Xác nhận thành công", 
+			"Cảm ơn bạn đã xác nhận nhận hàng. Đơn hàng " + order.getCode() + " đã hoàn thành.", 
+			"ORDER_STATUS"
+		);
+		
+		return toResponse(order);
+	}
+
+	@Override
+	@Transactional
+	public OrderResponse reportMissing(Long orderId, String reason) {
+		Order order = getOrderById(orderId);
+		User currentUser = getCurrentAuthenticatedUser();
+		if (!order.getUser().getId().equals(currentUser.getId())) {
+			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền thực hiện hành động này.");
+		}
+		if (order.getStatus() != OrderStatus.DELIVERED) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Chỉ có thể khiếu nại khi đơn hàng ở trạng thái đã giao.");
+		}
+		
+		order.setStatus(OrderStatus.DISPUTED);
+		String reportNote = "Khách hàng báo chưa nhận được hàng. Lý do: " + (reason != null ? reason : "Không có");
+		order.setNote(reportNote);
+		orderRepository.save(order);
+		
+		// Gửi thông báo cho Admin (giả sử có hệ thống nhận message admin, tạm log)
+		log.warn("[DISPUTE] Đơn hàng {} bị khiếu nại: {}", order.getCode(), reportNote);
+		
+		// Gửi thông báo cho Shipper
+		if (order.getShipper() != null) {
+			notificationService.sendNotification(
+				order.getShipper(),
+				"Đơn hàng bị khiếu nại",
+				"Đơn hàng " + order.getCode() + " bị khách hàng báo cáo chưa nhận được. Vui lòng kiểm tra lại.",
+				"ORDER_STATUS"
+			);
+		}
+		
+		return toResponse(order);
+	}
+
+	@Override
 	public Page<OrderResponse> getMyShipperOrders(int page, int sizePage, String shipperUsername) {
 		User shipper = getUserByEmail(shipperUsername);
 		PageRequest pageable = PageRequest.of(page, sizePage, Sort.by("createdAt").descending());
@@ -151,7 +218,16 @@ public class OrderServiceImpl implements OrderService {
 
 		if (saved.getUser() != null) {
 			String title = "Cập nhật đơn hàng " + saved.getCode();
-			String message = "Đơn hàng của bạn đã được cập nhật sang trạng thái: " + status;
+			String statusName = switch (status) {
+				case PENDING -> "Chờ xác nhận";
+				case ASSIGNED -> "Đã điều phối Shipper";
+				case PICKED_UP -> "Đang giao hàng";
+				case DELIVERED -> "Đã giao hàng";
+				case COMPLETED -> "Hoàn thành";
+				case CANCELED -> "Đã hủy";
+				default -> status.name();
+			};
+			String message = "Đơn hàng của bạn đã được cập nhật sang trạng thái: " + statusName;
 			if (note != null && !note.isBlank()) {
 				message += ". Ghi chú: " + note;
 			}

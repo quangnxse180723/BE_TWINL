@@ -31,8 +31,8 @@ public class EscrowReleaseScheduler {
                 .filter(o -> o.getStatus() == OrderStatus.DELIVERED)
                 .filter(o -> Boolean.FALSE.equals(o.getEscrowReleased()))
                 .filter(o -> o.getDeliveredAt() != null)
-                // Điều kiện: Đã qua 48h kể từ lúc giao hàng thành công
-                .filter(o -> o.getDeliveredAt().plusHours(48).isBefore(LocalDateTime.now()))
+                // Điều kiện: Đã qua 24h kể từ lúc giao hàng thành công
+                .filter(o -> o.getDeliveredAt().plusHours(24).isBefore(LocalDateTime.now()))
                 .toList();
 
         if (eligibleOrders.isEmpty()) {
@@ -45,8 +45,9 @@ public class EscrowReleaseScheduler {
                 // Giải ngân tiền vào ví thực cho người bán
                 walletService.releaseEscrow(order);
                 
-                // Đánh dấu cờ đã giải ngân để không quét lại lần sau
+                // Đánh dấu đã giải ngân và chuyển trạng thái sang COMPLETED
                 order.setEscrowReleased(true);
+                order.setStatus(OrderStatus.COMPLETED);
                 orderRepository.save(order);
                 
                 log.info("[ESCROW JOB] Đã giải ngân thành công cho đơn hàng: {}", order.getCode());

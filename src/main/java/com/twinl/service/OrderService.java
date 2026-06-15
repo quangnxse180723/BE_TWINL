@@ -25,6 +25,16 @@ public interface OrderService {
 	OrderResponse updateOrderStatusByShipper(Long orderId, OrderStatus status, String note, String shipperUsername);
 
 	/**
+	 * Khách hàng xác nhận đã nhận hàng.
+	 */
+	OrderResponse confirmReceipt(Long orderId);
+
+	/**
+	 * Khách hàng báo cáo chưa nhận được hàng.
+	 */
+	OrderResponse reportMissing(Long orderId, String reason);
+
+	/**
 	 * Shipper: Xem danh sách đơn hàng được gán cho mình.
 	 */
 	Page<OrderResponse> getMyShipperOrders(int page, int sizePage, String shipperUsername);

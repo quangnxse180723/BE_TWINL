@@ -31,4 +31,18 @@ public class OrderController {
 	public ResponseEntity<OrderResponse> getOrderByCode(@PathVariable String code) {
 		return ResponseEntity.ok(orderService.getMyOrderByCode(code));
 	}
+
+	@org.springframework.web.bind.annotation.PostMapping("/{id}/confirm-receipt")
+	public ResponseEntity<OrderResponse> confirmReceipt(@PathVariable Long id) {
+		return ResponseEntity.ok(orderService.confirmReceipt(id));
+	}
+
+	@org.springframework.web.bind.annotation.PostMapping("/{id}/report-missing")
+	public ResponseEntity<OrderResponse> reportMissing(
+			@PathVariable Long id,
+			@org.springframework.web.bind.annotation.RequestBody(required = false) java.util.Map<String, String> body
+	) {
+		String reason = body != null ? body.get("reason") : null;
+		return ResponseEntity.ok(orderService.reportMissing(id, reason));
+	}
 }
