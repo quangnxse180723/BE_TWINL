@@ -10,9 +10,11 @@ import org.springframework.stereotype.Service;
 @Service
 public class ContactServiceImpl implements ContactService {
 	private final ContactMessageRepository contactMessageRepository;
+	private final com.twinl.service.EmailService emailService;
 
-	public ContactServiceImpl(ContactMessageRepository contactMessageRepository) {
+	public ContactServiceImpl(ContactMessageRepository contactMessageRepository, com.twinl.service.EmailService emailService) {
 		this.contactMessageRepository = contactMessageRepository;
+		this.emailService = emailService;
 	}
 
 	@Override
@@ -25,6 +27,14 @@ public class ContactServiceImpl implements ContactService {
 				.build();
 
 		ContactMessage saved = contactMessageRepository.save(message);
+		
+		try {
+			emailService.sendContactConfirmation(saved.getEmail(), saved.getName());
+			emailService.sendContactNotificationToAdmin(saved.getName(), saved.getEmail(), saved.getPhone(), saved.getMessage());
+		} catch (Exception e) {
+			// Ignore email errors to not block the contact form submission
+			System.err.println("Failed to send contact emails: " + e.getMessage());
+		}
 		return ContactResponse.builder()
 				.id(saved.getId())
 				.name(saved.getName())

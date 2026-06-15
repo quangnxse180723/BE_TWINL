@@ -38,6 +38,7 @@ public class AuthServiceImpl implements AuthService {
 	private final AnalyticsService analyticsService;
 	private final com.twinl.repository.OtpRepository otpRepository;
 	private final com.twinl.service.EmailService emailService;
+	private final com.twinl.service.NotificationService notificationService;
 
 	public AuthServiceImpl(
 			UserRepository userRepository,
@@ -48,7 +49,8 @@ public class AuthServiceImpl implements AuthService {
 			HttpServletRequest httpServletRequest,
 			AnalyticsService analyticsService,
 			com.twinl.repository.OtpRepository otpRepository,
-			com.twinl.service.EmailService emailService
+			com.twinl.service.EmailService emailService,
+			com.twinl.service.NotificationService notificationService
 	) {
 		this.userRepository = userRepository;
 		this.roleRepository = roleRepository;
@@ -59,6 +61,7 @@ public class AuthServiceImpl implements AuthService {
 		this.analyticsService = analyticsService;
 		this.otpRepository = otpRepository;
 		this.emailService = emailService;
+		this.notificationService = notificationService;
 	}
 
 	@Override
@@ -78,6 +81,48 @@ public class AuthServiceImpl implements AuthService {
 		otpRepository.save(otpEntity);
 
 		emailService.sendOtpEmail(request.getEmail(), otpCode);
+	}
+
+	@Override
+	public void sendForgotPasswordOtp(com.twinl.dto.request.ForgotPasswordRequest request) {
+		if (!userRepository.existsByEmail(request.getEmail())) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Email không tồn tại trong hệ thống");
+		}
+		
+		String otpCode = String.format("%06d", new java.util.Random().nextInt(999999));
+		java.time.LocalDateTime expiresAt = java.time.LocalDateTime.now().plusMinutes(5);
+
+		com.twinl.entity.OtpEntity otpEntity = otpRepository.findByEmail(request.getEmail())
+				.orElse(new com.twinl.entity.OtpEntity());
+		otpEntity.setEmail(request.getEmail());
+		otpEntity.setOtpCode(otpCode);
+		otpEntity.setExpiresAt(expiresAt);
+		otpRepository.save(otpEntity);
+
+		emailService.sendForgotPasswordOtpEmail(request.getEmail(), otpCode);
+	}
+
+	@Override
+	public void resetPassword(com.twinl.dto.request.ResetPasswordRequest request) {
+		User user = userRepository.findByEmail(request.getEmail())
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Email không tồn tại trong hệ thống"));
+
+		com.twinl.entity.OtpEntity otpEntity = otpRepository.findByEmail(request.getEmail())
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mã OTP không hợp lệ hoặc chưa được gửi"));
+
+		if (!otpEntity.getOtpCode().equals(request.getOtp())) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mã OTP không chính xác");
+		}
+
+		if (otpEntity.getExpiresAt().isBefore(java.time.LocalDateTime.now())) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mã OTP đã hết hạn");
+		}
+
+		user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+		userRepository.save(user);
+		otpRepository.delete(otpEntity);
+
+		notificationService.sendNotification(user, "Đổi mật khẩu thành công", "Mật khẩu của bạn vừa được thay đổi. Nếu không phải bạn thực hiện, vui lòng liên hệ bộ phận hỗ trợ ngay lập tức.", "SECURITY");
 	}
 
 	@Override
@@ -109,6 +154,8 @@ public class AuthServiceImpl implements AuthService {
 
 		User savedUser = userRepository.save(user);
 		otpRepository.delete(otpEntity);
+
+		notificationService.sendNotification(savedUser, "Chào mừng bạn", "Đăng ký tài khoản Twinl Secondhand thành công! Bắt đầu khám phá ngay.", "SYSTEM");
 
 		String token = jwtService.generateToken(savedUser);
 
@@ -208,7 +255,11 @@ public class AuthServiceImpl implements AuthService {
 							.password(passwordEncoder.encode(UUID.randomUUID().toString())) // Random password for google users
 							.build();
 					user.getRoles().add(userRole);
-					user = userRepository.save(user);
+					User savedUser = userRepository.save(user);
+
+					notificationService.sendNotification(savedUser, "Chào mừng bạn", "Đăng nhập lần đầu bằng Google thành công! Vui lòng cập nhật thông tin cá nhân của bạn.", "SYSTEM");
+
+					user = savedUser;
 				}
 
 				boolean isActive = user.getActive() == null || Boolean.TRUE.equals(user.getActive());

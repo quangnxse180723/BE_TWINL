@@ -27,6 +27,18 @@ public class AuthController {
 		return ResponseEntity.ok().build();
 	}
 
+	@PostMapping("/forgot-password/send-otp")
+	public ResponseEntity<Void> sendForgotPasswordOtp(@Valid @RequestBody com.twinl.dto.request.ForgotPasswordRequest request) {
+		authService.sendForgotPasswordOtp(request);
+		return ResponseEntity.ok().build();
+	}
+
+	@PostMapping("/forgot-password/reset")
+	public ResponseEntity<Void> resetPassword(@Valid @RequestBody com.twinl.dto.request.ResetPasswordRequest request) {
+		authService.resetPassword(request);
+		return ResponseEntity.ok().build();
+	}
+
 	@PostMapping("/register")
 	public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
 		return ResponseEntity.status(HttpStatus.CREATED).body(authService.register(request));

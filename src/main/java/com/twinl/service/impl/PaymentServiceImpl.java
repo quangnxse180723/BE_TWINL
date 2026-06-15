@@ -57,6 +57,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final CartRepository cartRepository;
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
+    private final com.twinl.service.NotificationService notificationService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private static final Logger log = LoggerFactory.getLogger(PaymentServiceImpl.class);
@@ -67,13 +68,15 @@ public class PaymentServiceImpl implements PaymentService {
             OrderRepository orderRepository,
             CartRepository cartRepository,
             UserRepository userRepository,
-            ProductRepository productRepository) {
+            ProductRepository productRepository,
+            com.twinl.service.NotificationService notificationService) {
         this.vnpayProperties = vnpayProperties;
         this.sepayProperties = sepayProperties;
         this.orderRepository = orderRepository;
         this.cartRepository = cartRepository;
         this.userRepository = userRepository;
         this.productRepository = productRepository;
+        this.notificationService = notificationService;
     }
 
     @Override
@@ -160,9 +163,12 @@ public class PaymentServiceImpl implements PaymentService {
 
             orderRepository.save(order);
             log.info("[PAYMENT] Đơn hàng {} thanh toán thành công. Chờ Admin gán Shipper.", order.getCode());
+            
+            notificationService.sendNotification(order.getUser(), "Thanh toán thành công", "Đơn hàng " + order.getCode() + " đã được thanh toán thành công qua VNPay và đang chờ xác nhận.", "ORDER_STATUS");
             return;
         } else {
             order.setPaymentStatus(PaymentStatus.FAILED);
+            notificationService.sendNotification(order.getUser(), "Thanh toán thất bại", "Thanh toán cho đơn hàng " + order.getCode() + " đã bị hủy hoặc thất bại.", "ORDER_STATUS");
         }
         orderRepository.save(order);
     }
@@ -449,8 +455,9 @@ public class PaymentServiceImpl implements PaymentService {
             // Xóa giỏ hàng sau khi thanh toán thành công
             clearCart(order);
             orderRepository.save(order);
-
-            log.info("[SEPAY Webhook] Đơn hàng {} đã thanh toán thành công (SePay).", order.getCode());
+            log.info("[SEPAY Webhook] Đơn hàng {} thanh toán thành công.", order.getCode());
+            
+            notificationService.sendNotification(order.getUser(), "Thanh toán thành công", "Đơn hàng " + order.getCode() + " đã được thanh toán thành công qua SePay và đang chờ xác nhận.", "ORDER_STATUS");
 
         } catch (ResponseStatusException ex) {
             throw ex;
