@@ -11,6 +11,8 @@ public class AiAutoFillResponse {
     private String estimatedPrice;
     private String material;
     private String condition;
+    private Integer conditionPercentage;
+    private java.util.List<String> defects;
     private String color;
     private String rawData;
 }

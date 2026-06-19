@@ -41,6 +41,10 @@ public class ProductController {
 			@RequestParam(required = false) String maxPrice,
 			@RequestParam(required = false) String style,
 			@RequestParam(required = false) String excludeStyle,
+			@RequestParam(required = false) Integer minCondition,
+			@RequestParam(required = false) Integer maxCondition,
+			@RequestParam(required = false) java.util.List<String> defects,
+			@RequestParam(required = false) String sortBy,
 			@RequestParam(defaultValue = "0") int page,
 			@RequestParam(defaultValue = "12") int sizePage
 	) {
@@ -56,6 +60,10 @@ public class ProductController {
 				maxPrice,
 				style,
 				excludeStyle,
+				minCondition,
+				maxCondition,
+				defects,
+				sortBy,
 				page,
 				sizePage
 		));

@@ -4,6 +4,8 @@ import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -66,6 +68,16 @@ public class Product {
 
 	@Column(length = 120)
 	private String style;
+
+	@Column(name = "condition_percentage")
+	private Integer conditionPercentage;
+
+	@ElementCollection(fetch = FetchType.EAGER)
+	@CollectionTable(name = "product_defects", joinColumns = @JoinColumn(name = "product_id"))
+	@Column(name = "defect_type", length = 30)
+	@Enumerated(EnumType.STRING)
+	@Builder.Default
+	private Set<DefectType> defects = new HashSet<>();
 
 	@ElementCollection(fetch = FetchType.EAGER)
 	@CollectionTable(name = "product_images", joinColumns = @JoinColumn(name = "product_id"))

@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Set;
 import lombok.Getter;
 import lombok.Setter;
+import com.twinl.entity.DefectType;
 
 @Getter
 @Setter
@@ -50,4 +51,9 @@ public class ProductRequest {
 
 	private Set<String> sizes;
 	private Set<Long> colorIds;
+
+	@PositiveOrZero
+	private Integer conditionPercentage;
+
+	private Set<DefectType> defects;
 }

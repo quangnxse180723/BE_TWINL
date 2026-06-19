@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Set;
 import lombok.Builder;
 import lombok.Getter;
+import com.twinl.entity.DefectType;
 
 @Getter
 @Builder
@@ -27,6 +28,8 @@ public class ProductResponse {
 	private Set<String> sizes;
 	private Set<Long> colorIds;
 	private Set<String> colors;
+	private Integer conditionPercentage;
+	private Set<DefectType> defects;
 	private LocalDateTime createdAt;
 	private LocalDateTime updatedAt;
 }

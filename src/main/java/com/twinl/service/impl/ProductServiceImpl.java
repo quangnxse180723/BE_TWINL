@@ -66,6 +66,10 @@ public class ProductServiceImpl implements ProductService {
 			String maxPrice,
 			String style,
 			String excludeStyle,
+			Integer minCondition,
+			Integer maxCondition,
+			java.util.List<String> defects,
+			String sortBy,
 			int page,
 			int sizePage
 	) {
@@ -127,7 +131,40 @@ public class ProductServiceImpl implements ProductService {
 			));
 		}
 
-		PageRequest pageable = PageRequest.of(page, sizePage, Sort.by("createdAt").descending());
+		if (minCondition != null) {
+			spec = spec.and((root, query, cb) -> cb.greaterThanOrEqualTo(root.get("conditionPercentage"), minCondition));
+		}
+
+		if (maxCondition != null) {
+			spec = spec.and((root, query, cb) -> cb.lessThanOrEqualTo(root.get("conditionPercentage"), maxCondition));
+		}
+
+		if (defects != null && !defects.isEmpty()) {
+			List<com.twinl.entity.DefectType> defectTypes = defects.stream()
+					.map(d -> {
+						try {
+							return com.twinl.entity.DefectType.valueOf(d);
+						} catch (IllegalArgumentException e) {
+							return null;
+						}
+					})
+					.filter(java.util.Objects::nonNull)
+					.toList();
+			if (!defectTypes.isEmpty()) {
+				spec = spec.and((root, query, cb) -> root.join("defects").in(defectTypes));
+			}
+		}
+
+		Sort sort = Sort.by("createdAt").descending();
+		if ("price_asc".equals(sortBy)) {
+			sort = Sort.by("price").ascending();
+		} else if ("price_desc".equals(sortBy)) {
+			sort = Sort.by("price").descending();
+		} else if ("newest".equals(sortBy)) {
+			sort = Sort.by("createdAt").descending();
+		}
+
+		PageRequest pageable = PageRequest.of(page, sizePage, sort);
 		return productRepository.findAll(spec, pageable).map(this::toResponse);
 	}
 
@@ -154,6 +191,8 @@ public class ProductServiceImpl implements ProductService {
 				.stock(request.getStock())
 				.sizes(request.getSizes() == null ? new java.util.HashSet<>() : request.getSizes())
 				.colors(requireColors(request.getColorIds()))
+				.conditionPercentage(request.getConditionPercentage() != null ? request.getConditionPercentage() : 100)
+				.defects(request.getDefects() == null ? new java.util.HashSet<>() : request.getDefects())
 				.build();
 
 		Product saved = productRepository.save(product);
@@ -179,6 +218,8 @@ public class ProductServiceImpl implements ProductService {
 				.stock(request.getStock())
 				.sizes(request.getSizes() == null ? new java.util.HashSet<>() : request.getSizes())
 				.colors(requireColors(request.getColorIds()))
+				.conditionPercentage(request.getConditionPercentage() != null ? request.getConditionPercentage() : 100)
+				.defects(request.getDefects() == null ? new java.util.HashSet<>() : request.getDefects())
 				.seller(seller)
 				.build();
 
@@ -218,9 +259,11 @@ public class ProductServiceImpl implements ProductService {
 		product.setStock(request.getStock());
 		product.setSizes(request.getSizes() == null ? new java.util.HashSet<>() : request.getSizes());
 		product.setColors(requireColors(request.getColorIds()));
+		product.setConditionPercentage(request.getConditionPercentage() != null ? request.getConditionPercentage() : 100);
+		product.setDefects(request.getDefects() == null ? new java.util.HashSet<>() : request.getDefects());
 
-		Product saved = productRepository.save(product);
-		return toResponse(saved);
+		Product updated = productRepository.save(product);
+		return toResponse(updated);
 	}
 
 	@Override
@@ -295,8 +338,10 @@ public class ProductServiceImpl implements ProductService {
 				.style(product.getStyle())
 				.stock(product.getStock())
 				.sizes(product.getSizes())
-				.colorIds(product.getColors().stream().map(Color::getId).collect(Collectors.toSet()))
-				.colors(product.getColors().stream().map(Color::getName).collect(Collectors.toSet()))
+				.colorIds(product.getColors().stream().map(c -> c.getId()).collect(Collectors.toSet()))
+				.colors(product.getColors().stream().map(c -> c.getName()).collect(Collectors.toSet()))
+				.conditionPercentage(product.getConditionPercentage())
+				.defects(product.getDefects())
 				.createdAt(product.getCreatedAt())
 				.updatedAt(product.getUpdatedAt())
 				.build();

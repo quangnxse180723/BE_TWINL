@@ -19,6 +19,10 @@ public interface ProductService {
 			String maxPrice,
 			String style,
 			String excludeStyle,
+			Integer minCondition,
+			Integer maxCondition,
+			java.util.List<String> defects,
+			String sortBy,
 			int page,
 			int sizePage
 	);
