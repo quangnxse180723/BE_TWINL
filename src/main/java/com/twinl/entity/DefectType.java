@@ -1,4 +1,4 @@
-﻿package com.twinl.entity;
+package com.twinl.entity;
 
 public enum DefectType {
     MINT,           // Hoàn hảo, không lỗi
