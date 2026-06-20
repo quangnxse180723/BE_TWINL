@@ -29,6 +29,10 @@ public class ProductResponse {
 	private Set<Long> colorIds;
 	private Set<String> colors;
 	private Integer conditionPercentage;
+	private Float length;
+	private Float shoulder;
+	private Float chest;
+	private Float waist;
 	private Set<DefectType> defects;
 	private LocalDateTime createdAt;
 	private LocalDateTime updatedAt;

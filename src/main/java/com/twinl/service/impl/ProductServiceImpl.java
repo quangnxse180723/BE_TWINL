@@ -192,6 +192,10 @@ public class ProductServiceImpl implements ProductService {
 				.sizes(request.getSizes() == null ? new java.util.HashSet<>() : request.getSizes())
 				.colors(requireColors(request.getColorIds()))
 				.conditionPercentage(request.getConditionPercentage() != null ? request.getConditionPercentage() : 100)
+				.length(request.getLength())
+				.shoulder(request.getShoulder())
+				.chest(request.getChest())
+				.waist(request.getWaist())
 				.defects(request.getDefects() == null ? new java.util.HashSet<>() : request.getDefects())
 				.build();
 
@@ -219,6 +223,10 @@ public class ProductServiceImpl implements ProductService {
 				.sizes(request.getSizes() == null ? new java.util.HashSet<>() : request.getSizes())
 				.colors(requireColors(request.getColorIds()))
 				.conditionPercentage(request.getConditionPercentage() != null ? request.getConditionPercentage() : 100)
+				.length(request.getLength())
+				.shoulder(request.getShoulder())
+				.chest(request.getChest())
+				.waist(request.getWaist())
 				.defects(request.getDefects() == null ? new java.util.HashSet<>() : request.getDefects())
 				.seller(seller)
 				.build();
@@ -260,6 +268,10 @@ public class ProductServiceImpl implements ProductService {
 		product.setSizes(request.getSizes() == null ? new java.util.HashSet<>() : request.getSizes());
 		product.setColors(requireColors(request.getColorIds()));
 		product.setConditionPercentage(request.getConditionPercentage() != null ? request.getConditionPercentage() : 100);
+		product.setLength(request.getLength());
+		product.setShoulder(request.getShoulder());
+		product.setChest(request.getChest());
+		product.setWaist(request.getWaist());
 		product.setDefects(request.getDefects() == null ? new java.util.HashSet<>() : request.getDefects());
 
 		Product updated = productRepository.save(product);
@@ -341,6 +353,10 @@ public class ProductServiceImpl implements ProductService {
 				.colorIds(product.getColors().stream().map(c -> c.getId()).collect(Collectors.toSet()))
 				.colors(product.getColors().stream().map(c -> c.getName()).collect(Collectors.toSet()))
 				.conditionPercentage(product.getConditionPercentage())
+				.length(product.getLength())
+				.shoulder(product.getShoulder())
+				.chest(product.getChest())
+				.waist(product.getWaist())
 				.defects(product.getDefects())
 				.createdAt(product.getCreatedAt())
 				.updatedAt(product.getUpdatedAt())

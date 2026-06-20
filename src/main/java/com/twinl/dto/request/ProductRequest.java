@@ -55,5 +55,17 @@ public class ProductRequest {
 	@PositiveOrZero
 	private Integer conditionPercentage;
 
+	@PositiveOrZero
+	private Float length;
+
+	@PositiveOrZero
+	private Float shoulder;
+
+	@PositiveOrZero
+	private Float chest;
+
+	@PositiveOrZero
+	private Float waist;
+
 	private Set<DefectType> defects;
 }

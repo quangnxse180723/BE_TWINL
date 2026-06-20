@@ -72,6 +72,18 @@ public class Product {
 	@Column(name = "condition_percentage")
 	private Integer conditionPercentage;
 
+	@Column(name = "length")
+	private Float length;
+
+	@Column(name = "shoulder")
+	private Float shoulder;
+
+	@Column(name = "chest")
+	private Float chest;
+
+	@Column(name = "waist")
+	private Float waist;
+
 	@ElementCollection(fetch = FetchType.EAGER)
 	@CollectionTable(name = "product_defects", joinColumns = @JoinColumn(name = "product_id"))
 	@Column(name = "defect_type", length = 30)
