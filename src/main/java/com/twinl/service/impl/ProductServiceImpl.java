@@ -164,7 +164,10 @@ public class ProductServiceImpl implements ProductService {
 				spec = spec.and((root, query, cb) -> cb.equal(root.get("status"), status.toUpperCase()));
 			}
 		} else {
-			spec = spec.and((root, query, cb) -> cb.equal(root.get("status"), "ACTIVE"));
+			spec = spec.and((root, query, cb) -> cb.or(
+					cb.equal(root.get("status"), "ACTIVE"),
+					cb.isNull(root.get("status"))
+			));
 		}
 
 		Sort sort = Sort.by("createdAt").descending();
