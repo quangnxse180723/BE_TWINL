@@ -4,6 +4,8 @@ import lombok.*;
 @Data @Builder @NoArgsConstructor @AllArgsConstructor
 public class AiAutoFillResponse {
     private String name;
+    private String category;
+    private Long categoryId;
     private String brand;
     private String style;
     private String gender;
@@ -14,5 +16,7 @@ public class AiAutoFillResponse {
     private Integer conditionPercentage;
     private java.util.List<String> defects;
     private String color;
+    private java.util.List<Long> colorIds;
+    private java.util.List<String> colorNames;
     private String rawData;
 }

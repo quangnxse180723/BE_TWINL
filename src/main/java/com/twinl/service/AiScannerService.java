@@ -24,5 +24,13 @@ public interface AiScannerService {
      * @return Map { "valid": true/false, "message": "..." }
      */
     Map<String, Object> validateImageSlot(MultipartFile file, String slotType);
+
+    /**
+     * Phân loại hình ảnh sản phẩm thời trang ("Mặt trước", "Mặt sau").
+     *
+     * @param file File ảnh cần kiểm tra
+     * @return FRONT_VALID, BACK_VALID, hoặc INVALID_IMAGE
+     */
+    String classifyImageSide(MultipartFile file);
 }
 

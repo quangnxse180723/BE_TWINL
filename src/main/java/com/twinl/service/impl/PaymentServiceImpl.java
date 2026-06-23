@@ -165,6 +165,11 @@ public class PaymentServiceImpl implements PaymentService {
             log.info("[PAYMENT] Đơn hàng {} thanh toán thành công. Chờ Admin gán Shipper.", order.getCode());
             
             notificationService.sendNotification(order.getUser(), "Thanh toán thành công", "Đơn hàng " + order.getCode() + " đã được thanh toán thành công qua VNPay và đang chờ xác nhận.", "ORDER_STATUS");
+
+            java.util.List<User> admins = userRepository.findByRoles_Name(com.twinl.entity.RoleName.ADMIN);
+            for (User admin : admins) {
+                notificationService.sendNotification(admin, "Đơn hàng mới", "Đơn hàng " + order.getCode() + " vừa được thanh toán thành công. Vui lòng kiểm tra và gán Shipper.", "NEW_ORDER_PAID");
+            }
             return;
         } else {
             order.setPaymentStatus(PaymentStatus.FAILED);
@@ -458,6 +463,11 @@ public class PaymentServiceImpl implements PaymentService {
             log.info("[SEPAY Webhook] Đơn hàng {} thanh toán thành công.", order.getCode());
             
             notificationService.sendNotification(order.getUser(), "Thanh toán thành công", "Đơn hàng " + order.getCode() + " đã được thanh toán thành công qua SePay và đang chờ xác nhận.", "ORDER_STATUS");
+
+            java.util.List<User> admins = userRepository.findByRoles_Name(com.twinl.entity.RoleName.ADMIN);
+            for (User admin : admins) {
+                notificationService.sendNotification(admin, "Đơn hàng mới", "Đơn hàng " + order.getCode() + " vừa được thanh toán thành công. Vui lòng kiểm tra và gán Shipper.", "NEW_ORDER_PAID");
+            }
 
         } catch (ResponseStatusException ex) {
             throw ex;

@@ -8,4 +8,6 @@ import lombok.Getter;
 public class CategoryResponse {
 	private Long id;
 	private String name;
+	private Long parentId;
+	private java.util.List<CategoryResponse> children;
 }

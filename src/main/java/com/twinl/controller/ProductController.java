@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -44,6 +45,7 @@ public class ProductController {
 			@RequestParam(required = false) Integer minCondition,
 			@RequestParam(required = false) Integer maxCondition,
 			@RequestParam(required = false) java.util.List<String> defects,
+			@RequestParam(required = false) String status,
 			@RequestParam(required = false) String sortBy,
 			@RequestParam(defaultValue = "0") int page,
 			@RequestParam(defaultValue = "12") int sizePage
@@ -63,6 +65,7 @@ public class ProductController {
 				minCondition,
 				maxCondition,
 				defects,
+				status,
 				sortBy,
 				page,
 				sizePage
@@ -96,5 +99,13 @@ public class ProductController {
 	public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
 		productService.deleteProduct(id);
 		return ResponseEntity.noContent().build();
+	}
+
+	@PatchMapping("/{id}/status")
+	public ResponseEntity<ProductResponse> updateProductStatus(
+			@PathVariable Long id,
+			@RequestParam String status
+	) {
+		return ResponseEntity.ok(productService.updateProductStatus(id, status));
 	}
 }

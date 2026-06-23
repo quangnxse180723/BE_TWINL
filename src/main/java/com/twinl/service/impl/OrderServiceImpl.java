@@ -4,6 +4,7 @@ import com.twinl.dto.response.OrderItemResponse;
 import com.twinl.dto.response.OrderResponse;
 import com.twinl.entity.Order;
 import com.twinl.entity.OrderStatus;
+import com.twinl.entity.PaymentStatus;
 import com.twinl.entity.RoleName;
 import com.twinl.entity.User;
 import com.twinl.repository.OrderRepository;
@@ -51,10 +52,39 @@ public class OrderServiceImpl implements OrderService {
 	}
 
 	@Override
-	public Page<OrderResponse> getMyOrders(int page, int sizePage) {
+	public Page<OrderResponse> getMyOrders(int page, int sizePage, String status) {
 		User user = getCurrentAuthenticatedUser();
 		PageRequest pageable = PageRequest.of(page, sizePage, Sort.by("createdAt").descending());
-		return orderRepository.findByUserId(user.getId(), pageable).map(this::toResponse);
+		
+		if (status == null || status.trim().isEmpty() || status.equalsIgnoreCase("ALL")) {
+			return orderRepository.findByUserId(user.getId(), pageable).map(this::toResponse);
+		}
+		
+		java.util.List<OrderStatus> statuses = new java.util.ArrayList<>();
+		switch (status.toUpperCase()) {
+			case "PENDING": 
+				statuses.add(OrderStatus.PENDING); 
+				break;
+			case "SHIPPING": 
+				statuses.add(OrderStatus.ASSIGNED);
+				statuses.add(OrderStatus.PICKED_UP);
+				break;
+			case "DELIVERED":
+				statuses.add(OrderStatus.DELIVERED);
+				statuses.add(OrderStatus.COMPLETED);
+				break;
+			case "CANCELED":
+				statuses.add(OrderStatus.CANCELED);
+				statuses.add(OrderStatus.DISPUTED);
+				break;
+			case "RETURNED":
+				statuses.add(OrderStatus.RETURNED);
+				break;
+			default:
+				return orderRepository.findByUserId(user.getId(), pageable).map(this::toResponse);
+		}
+		
+		return orderRepository.findByUserIdAndStatusIn(user.getId(), statuses, pageable).map(this::toResponse);
 	}
 
 	@Override
@@ -157,6 +187,11 @@ public class OrderServiceImpl implements OrderService {
 		if (order.getStatus() != OrderStatus.PENDING) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
 					"Chỉ có thể gán Shipper cho đơn hàng ở trạng thái PENDING. Trạng thái hiện tại: " + order.getStatus());
+		}
+
+		if (order.getPaymentStatus() != PaymentStatus.SUCCESS) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+					"Không thể gán Shipper cho đơn hàng chưa thanh toán. Vui lòng đợi khách hàng thanh toán thành công.");
 		}
 
 		User shipper = userRepository.findById(shipperId)

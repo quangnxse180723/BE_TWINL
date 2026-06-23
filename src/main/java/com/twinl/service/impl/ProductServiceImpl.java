@@ -38,19 +38,22 @@ public class ProductServiceImpl implements ProductService {
 	private final ColorRepository colorRepository;
 	private final UserRepository userRepository;
 	private final Cloudinary cloudinary;
+	private final com.twinl.service.NotificationService notificationService;
 
 	public ProductServiceImpl(
 			ProductRepository productRepository,
 			CategoryRepository categoryRepository,
 			ColorRepository colorRepository,
 			UserRepository userRepository,
-			Cloudinary cloudinary
+			Cloudinary cloudinary,
+			com.twinl.service.NotificationService notificationService
 	) {
 		this.productRepository = productRepository;
 		this.categoryRepository = categoryRepository;
 		this.colorRepository = colorRepository;
 		this.userRepository = userRepository;
 		this.cloudinary = cloudinary;
+		this.notificationService = notificationService;
 	}
 
 	@Override
@@ -69,6 +72,7 @@ public class ProductServiceImpl implements ProductService {
 			Integer minCondition,
 			Integer maxCondition,
 			java.util.List<String> defects,
+			String status,
 			String sortBy,
 			int page,
 			int sizePage
@@ -155,6 +159,14 @@ public class ProductServiceImpl implements ProductService {
 			}
 		}
 
+		if (status != null && !status.isBlank()) {
+			if (!"ALL".equalsIgnoreCase(status)) {
+				spec = spec.and((root, query, cb) -> cb.equal(root.get("status"), status.toUpperCase()));
+			}
+		} else {
+			spec = spec.and((root, query, cb) -> cb.equal(root.get("status"), "ACTIVE"));
+		}
+
 		Sort sort = Sort.by("createdAt").descending();
 		if ("price_asc".equals(sortBy)) {
 			sort = Sort.by("price").ascending();
@@ -217,7 +229,7 @@ public class ProductServiceImpl implements ProductService {
 				.brand(request.getBrand())
 				.gender(request.getGender())
 				.imageUrls(request.getImageUrls() == null ? new ArrayList<>() : request.getImageUrls())
-				.status(request.getStatus() == null ? "ACTIVE" : request.getStatus())
+				.status("PENDING")
 				.style(request.getStyle())
 				.stock(request.getStock())
 				.sizes(request.getSizes() == null ? new java.util.HashSet<>() : request.getSizes())
@@ -232,6 +244,12 @@ public class ProductServiceImpl implements ProductService {
 				.build();
 
 		Product saved = productRepository.save(product);
+
+		java.util.List<User> admins = userRepository.findByRoles_Name(com.twinl.entity.RoleName.ADMIN);
+		for (User admin : admins) {
+			notificationService.sendNotification(admin, "Sản phẩm mới chờ duyệt", "Người bán " + seller.getDisplayName() + " vừa đăng sản phẩm mới: " + saved.getName(), "NEW_PRODUCT_PENDING");
+		}
+
 		return toResponse(saved);
 	}
 
@@ -241,6 +259,16 @@ public class ProductServiceImpl implements ProductService {
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Seller not found"));
 		PageRequest pageable = PageRequest.of(page, sizePage, Sort.by("createdAt").descending());
 		return productRepository.findBySellerId(seller.getId(), pageable).map(this::toResponse);
+	}
+
+	@Override
+	public ProductResponse updateProductStatus(Long id, String status) {
+		Product product = productRepository.findById(id)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
+		
+		product.setStatus(status.toUpperCase());
+		Product saved = productRepository.save(product);
+		return toResponse(saved);
 	}
 
 	@Override

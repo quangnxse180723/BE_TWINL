@@ -24,6 +24,14 @@ public class Category {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
-	@Column(nullable = false, unique = true, length = 120)
+	@Column(nullable = false, length = 120)
 	private String name;
+
+	@jakarta.persistence.ManyToOne(fetch = jakarta.persistence.FetchType.LAZY)
+	@jakarta.persistence.JoinColumn(name = "parent_id")
+	private Category parent;
+
+	@jakarta.persistence.OneToMany(mappedBy = "parent", cascade = jakarta.persistence.CascadeType.ALL)
+	@com.fasterxml.jackson.annotation.JsonIgnore
+	private java.util.List<Category> children = new java.util.ArrayList<>();
 }

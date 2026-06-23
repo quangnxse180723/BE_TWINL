@@ -77,5 +77,21 @@ public class AiScannerController {
     ) {
         return ResponseEntity.ok(aiScannerService.validateImageSlot(file, slotType));
     }
+
+    /**
+     * POST /api/v1/ai/classify-side
+     *
+     * Phân loại hình ảnh sản phẩm ("Mặt trước", "Mặt sau")
+     *
+     * @param file File ảnh cần kiểm tra
+     * @return Dạng Map chứa thuộc tính "result" có giá trị: FRONT_VALID, BACK_VALID, hoặc INVALID_IMAGE
+     */
+    @PostMapping("/classify-side")
+    public ResponseEntity<Map<String, String>> classifySide(
+            @RequestParam("file") MultipartFile file
+    ) {
+        String result = aiScannerService.classifyImageSide(file);
+        return ResponseEntity.ok(Map.of("result", result));
+    }
 }
 

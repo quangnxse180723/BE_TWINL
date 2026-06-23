@@ -6,7 +6,7 @@ import org.springframework.data.domain.Page;
 
 public interface OrderService {
 	Page<OrderResponse> getOrders(int page, int sizePage);
-	Page<OrderResponse> getMyOrders(int page, int sizePage);
+	Page<OrderResponse> getMyOrders(int page, int sizePage, String status);
 	OrderResponse getMyOrderByCode(String code);
 	Page<OrderResponse> getOrdersBySeller(String username, int page, int sizePage);
 

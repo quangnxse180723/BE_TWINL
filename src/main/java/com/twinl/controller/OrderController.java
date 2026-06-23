@@ -22,9 +22,10 @@ public class OrderController {
 	@GetMapping
 	public ResponseEntity<Page<OrderResponse>> getMyOrders(
 			@RequestParam(defaultValue = "0") int page,
-			@RequestParam(defaultValue = "10") int sizePage
+			@RequestParam(defaultValue = "10") int sizePage,
+			@RequestParam(required = false) String status
 	) {
-		return ResponseEntity.ok(orderService.getMyOrders(page, sizePage));
+		return ResponseEntity.ok(orderService.getMyOrders(page, sizePage, status));
 	}
 
 	@GetMapping("/{code}")

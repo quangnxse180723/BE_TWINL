@@ -22,6 +22,7 @@ public interface ProductService {
 			Integer minCondition,
 			Integer maxCondition,
 			java.util.List<String> defects,
+			String status,
 			String sortBy,
 			int page,
 			int sizePage
@@ -32,6 +33,7 @@ public interface ProductService {
 	ProductResponse createSellerProduct(ProductRequest request, String username);
 	Page<ProductResponse> getProductsBySeller(String username, int page, int sizePage);
 	ProductResponse updateProduct(Long id, ProductRequest request);
+	ProductResponse updateProductStatus(Long id, String status);
 	void deleteProduct(Long id);
 	List<String> uploadProductImages(List<MultipartFile> files);
 }
