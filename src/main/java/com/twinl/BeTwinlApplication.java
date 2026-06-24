@@ -28,4 +28,9 @@ public class BeTwinlApplication {
 			// Ignore if it doesn't exist
 		}
 	}
+
+	@PostConstruct
+	public void initTimeZone() {
+		java.util.TimeZone.setDefault(java.util.TimeZone.getTimeZone("Asia/Ho_Chi_Minh"));
+	}
 }
