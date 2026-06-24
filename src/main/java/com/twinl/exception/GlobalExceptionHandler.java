@@ -66,7 +66,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(org.springframework.mail.MailException.class)
     public ResponseEntity<Map<String, String>> handleMailException(org.springframework.mail.MailException ex) {
         Map<String, String> response = new HashMap<>();
-        response.put("message", "Không thể gửi email OTP. Vui lòng kiểm tra lại cấu hình tài khoản Gmail.");
+        response.put("message", "Không thể gửi email OTP. Vui lòng kiểm tra lại cấu hình email server.");
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
