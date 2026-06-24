@@ -18,5 +18,10 @@ public class AiAutoFillResponse {
     private String color;
     private java.util.List<Long> colorIds;
     private java.util.List<String> colorNames;
+    private java.util.List<String> sizes;
+    private Float length;
+    private Float shoulder;
+    private Float chest;
+    private Float waist;
     private String rawData;
 }

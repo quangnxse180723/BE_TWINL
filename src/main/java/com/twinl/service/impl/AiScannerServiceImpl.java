@@ -339,9 +339,12 @@ public class AiScannerServiceImpl implements AiScannerService {
             "\"material\": \"Chất liệu chính\", \"condition\": \"Tình trạng: Mới/Như mới/Tốt/Bình thường\", " +
             "\"conditionPercentage\": 90, " +
             "\"defects\": [\"MINT\", \"MINOR_FLAW\", \"STAINED\", \"MISSING_BUTTON\", \"TORN\", \"FADED\"], " +
-            "\"color\": \"Màu sắc chủ đạo (VD: Đen, Trắng, Đỏ)\"}\n" +
+            "\"color\": \"Màu sắc chủ đạo (VD: Đen, Trắng, Đỏ)\", " +
+            "\"sizes\": [\"M\"], \"length\": 65, \"shoulder\": 45, \"chest\": 100, \"waist\": 0}\n" +
             "Lưu ý cho defects: Trả về một mảng chứa các mã lỗi khớp với hình ảnh. Nếu không có lỗi gì, trả về [\"MINT\"]. " +
             "Lưu ý cho conditionPercentage: Ước lượng độ mới theo phần trăm (số nguyên từ 50 đến 100). " +
+            "Lưu ý cho sizes: Mảng các size dự đoán (S, M, L, XL...). Nếu không rõ trả về rỗng []. " +
+            "Lưu ý cho các số đo (length, shoulder, chest, waist): Ước lượng số đo theo cm. Nếu không có thông tin hoặc không rõ, trả về 0. " +
             "Ước tính giá theo thị trường secondhand Việt Nam.";
         try {
             List<Map<String, Object>> parts = new java.util.ArrayList<>();
