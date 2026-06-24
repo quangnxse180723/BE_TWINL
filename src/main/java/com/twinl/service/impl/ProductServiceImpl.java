@@ -90,7 +90,14 @@ public class ProductServiceImpl implements ProductService {
 		}
 
 		if (category != null && !category.isBlank()) {
-			spec = spec.and((root, query, cb) -> cb.equal(root.join("category", JoinType.LEFT).get("name"), category));
+			spec = spec.and((root, query, cb) -> {
+				jakarta.persistence.criteria.Join<Object, Object> categoryJoin = root.join("category", jakarta.persistence.criteria.JoinType.LEFT);
+				jakarta.persistence.criteria.Join<Object, Object> parentJoin = categoryJoin.join("parent", jakarta.persistence.criteria.JoinType.LEFT);
+				return cb.or(
+						cb.equal(categoryJoin.get("name"), category),
+						cb.equal(parentJoin.get("name"), category)
+				);
+			});
 		}
 
 		if (brand != null && !brand.isBlank()) {
