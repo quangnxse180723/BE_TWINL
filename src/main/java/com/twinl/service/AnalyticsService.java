@@ -31,19 +31,43 @@ public class AnalyticsService {
         String device = parseDevice(userAgent);
         String referer = request.getHeader("Referer");
         String source = parseSource(referer);
-        String location = "Ho Chi Minh, VN"; 
 
-        AccessLog log = AccessLog.builder()
-                .ipAddress(ipAddress)
-                .userAgent(userAgent)
-                .device(device)
-                .source(source)
-                .location(location)
-                .status(status)
-                .userId(userId)
-                .createdAt(LocalDateTime.now())
-                .build();
-        accessLogRepository.save(log);
+        final String finalIp = ipAddress;
+        
+        java.util.concurrent.CompletableFuture.runAsync(() -> {
+            String location = getLocationFromIp(finalIp);
+            AccessLog log = AccessLog.builder()
+                    .ipAddress(finalIp)
+                    .userAgent(userAgent)
+                    .device(device)
+                    .source(source)
+                    .location(location)
+                    .status(status)
+                    .userId(userId)
+                    .createdAt(LocalDateTime.now())
+                    .build();
+            accessLogRepository.save(log);
+        });
+    }
+
+    private String getLocationFromIp(String ipAddress) {
+        if (ipAddress == null || ipAddress.isEmpty() || "127.0.0.1".equals(ipAddress) || "0:0:0:0:0:0:0:1".equals(ipAddress) || ipAddress.startsWith("192.168.")) {
+            return "Localhost, VN";
+        }
+        try {
+            if (ipAddress.contains(",")) {
+                ipAddress = ipAddress.split(",")[0].trim();
+            }
+            org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
+            String url = "http://ip-api.com/json/" + ipAddress;
+            java.util.Map<String, Object> response = restTemplate.getForObject(url, java.util.Map.class);
+            if (response != null && "success".equals(response.get("status"))) {
+                return response.get("city") + ", " + response.get("countryCode");
+            }
+        } catch (Exception e) {
+            // Ignore exception
+        }
+        return "Unknown";
     }
 
     private String parseSource(String referer) {
