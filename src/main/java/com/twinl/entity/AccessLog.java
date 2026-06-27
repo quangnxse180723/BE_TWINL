@@ -38,6 +38,10 @@ public class AccessLog {
     @Column(name = "user_id")
     private Long userId;
 
+    @Column(name = "duration_seconds")
+    @Builder.Default
+    private Integer durationSeconds = 0;
+
     @Column(name = "created_at")
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();

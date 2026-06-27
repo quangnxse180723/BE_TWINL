@@ -22,7 +22,7 @@ public class AnalyticsService {
         this.userRepository = userRepository;
     }
 
-    public void logAccess(HttpServletRequest request, String status, Long userId) {
+    public Long logAccess(HttpServletRequest request, String status, Long userId) {
         String ipAddress = request.getHeader("X-Forwarded-For");
         if (ipAddress == null || ipAddress.isEmpty() || "unknown".equalsIgnoreCase(ipAddress)) {
             ipAddress = request.getRemoteAddr();
@@ -34,18 +34,31 @@ public class AnalyticsService {
 
         final String finalIp = ipAddress;
         
+        AccessLog log = AccessLog.builder()
+                .ipAddress(finalIp)
+                .userAgent(userAgent)
+                .device(device)
+                .source(source)
+                .location("Đang xử lý...")
+                .status(status)
+                .userId(userId)
+                .durationSeconds(0)
+                .createdAt(LocalDateTime.now())
+                .build();
+        final AccessLog savedLog = accessLogRepository.save(log);
+
         java.util.concurrent.CompletableFuture.runAsync(() -> {
             String location = getLocationFromIp(finalIp);
-            AccessLog log = AccessLog.builder()
-                    .ipAddress(finalIp)
-                    .userAgent(userAgent)
-                    .device(device)
-                    .source(source)
-                    .location(location)
-                    .status(status)
-                    .userId(userId)
-                    .createdAt(LocalDateTime.now())
-                    .build();
+            savedLog.setLocation(location);
+            accessLogRepository.save(savedLog);
+        });
+
+        return savedLog.getId();
+    }
+
+    public void updateDuration(Long logId, int secondsToAdd) {
+        accessLogRepository.findById(logId).ifPresent(log -> {
+            log.setDurationSeconds((log.getDurationSeconds() != null ? log.getDurationSeconds() : 0) + secondsToAdd);
             accessLogRepository.save(log);
         });
     }
@@ -116,17 +129,25 @@ public class AnalyticsService {
         long activeUsers = accessLogRepository.countByStatusAndCreatedAtBetween("SUCCESS", startDate, endDate);
 
         double bounceRateVal = 0.0;
+        long totalDuration = 0;
         if (totalVisits > 0) {
             long visitOnly = accessLogRepository.countByStatusAndCreatedAtBetween("VISIT", startDate, endDate);
             bounceRateVal = (double) visitOnly / totalVisits * 100;
+
+            List<AccessLog> allLogs = accessLogRepository.findAllByCreatedAtBetween(startDate, endDate);
+            for (AccessLog lg : allLogs) {
+                totalDuration += (lg.getDurationSeconds() != null ? lg.getDurationSeconds() : 0);
+            }
         }
         String bounceRate = String.format("%.1f%%", bounceRateVal);
+        long avgSessionTime = totalVisits > 0 ? totalDuration / totalVisits : 0;
 
         Map<String, Object> data = new HashMap<>();
         data.put("totalVisits", totalVisits);
         data.put("activeUsers", activeUsers);
         data.put("bounceRate", bounceRate);
         data.put("newSignups", newSignups);
+        data.put("avgSessionTime", avgSessionTime);
         return data;
     }
 
@@ -229,6 +250,7 @@ public class AnalyticsService {
                     .source(log.getSource())
                     .status(log.getStatus())
                     .userId(log.getUserId())
+                    .durationSeconds(log.getDurationSeconds() != null ? log.getDurationSeconds() : 0)
                     .createdAt(log.getCreatedAt());
 
             if (log.getUserId() != null) {

@@ -25,8 +25,17 @@ public class AnalyticsController {
     }
 
     @PostMapping("/track")
-    public ResponseEntity<Void> trackVisit(HttpServletRequest request) {
-        analyticsService.logAccess(request, "VISIT", null);
+    public ResponseEntity<java.util.Map<String, Long>> trackVisit(HttpServletRequest request) {
+        Long id = analyticsService.logAccess(request, "VISIT", null);
+        java.util.Map<String, Long> response = new java.util.HashMap<>();
+        response.put("id", id);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/ping/{id}")
+    public ResponseEntity<Void> pingActiveTime(@org.springframework.web.bind.annotation.PathVariable Long id) {
+        // Cộng 15 giây cho mỗi lần ping
+        analyticsService.updateDuration(id, 15);
         return ResponseEntity.ok().build();
     }
 
