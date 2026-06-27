@@ -21,5 +21,6 @@ public class AccessLogResponse {
     private Long userId;
     private String userName;
     private String userRole;
+    private Integer durationSeconds;
     private LocalDateTime createdAt;
 }
