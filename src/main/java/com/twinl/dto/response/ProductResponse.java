@@ -14,6 +14,7 @@ public class ProductResponse {
 	private Long id;
 	private Long sellerId;
 	private String sellerName;
+	private String sellerAvatarUrl;
 	private String name;
 	private String description;
 	private BigDecimal price;
