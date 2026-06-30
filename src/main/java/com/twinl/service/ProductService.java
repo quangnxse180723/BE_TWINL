@@ -2,6 +2,7 @@ package com.twinl.service;
 
 import com.twinl.dto.request.ProductRequest;
 import com.twinl.dto.response.ProductResponse;
+import com.twinl.dto.response.SellerProfileResponse;
 import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.web.multipart.MultipartFile;
@@ -36,4 +37,5 @@ public interface ProductService {
 	ProductResponse updateProductStatus(Long id, String status);
 	void deleteProduct(Long id);
 	List<String> uploadProductImages(List<MultipartFile> files);
+	SellerProfileResponse getSellerProfile(Long sellerId);
 }

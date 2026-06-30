@@ -2,6 +2,7 @@ package com.twinl.controller;
 
 import com.twinl.dto.request.ProductRequest;
 import com.twinl.dto.response.ProductResponse;
+import com.twinl.dto.response.SellerProfileResponse;
 import com.twinl.service.ProductService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
@@ -107,5 +108,10 @@ public class ProductController {
 			@RequestParam String status
 	) {
 		return ResponseEntity.ok(productService.updateProductStatus(id, status));
+	}
+
+	@GetMapping("/sellers/{sellerId}/profile")
+	public ResponseEntity<SellerProfileResponse> getSellerProfile(@PathVariable Long sellerId) {
+		return ResponseEntity.ok(productService.getSellerProfile(sellerId));
 	}
 }

@@ -4,12 +4,14 @@ import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
 import com.twinl.dto.request.ProductRequest;
 import com.twinl.dto.response.ProductResponse;
+import com.twinl.dto.response.SellerProfileResponse;
 import com.twinl.entity.Category;
 import com.twinl.entity.Color;
 import com.twinl.entity.Product;
 import com.twinl.entity.User;
 import com.twinl.repository.CategoryRepository;
 import com.twinl.repository.ColorRepository;
+import com.twinl.repository.OrderRepository;
 import com.twinl.repository.ProductRepository;
 import com.twinl.repository.UserRepository;
 import com.twinl.service.ProductService;
@@ -37,6 +39,7 @@ public class ProductServiceImpl implements ProductService {
 	private final CategoryRepository categoryRepository;
 	private final ColorRepository colorRepository;
 	private final UserRepository userRepository;
+	private final OrderRepository orderRepository;
 	private final Cloudinary cloudinary;
 	private final com.twinl.service.NotificationService notificationService;
 
@@ -45,6 +48,7 @@ public class ProductServiceImpl implements ProductService {
 			CategoryRepository categoryRepository,
 			ColorRepository colorRepository,
 			UserRepository userRepository,
+			OrderRepository orderRepository,
 			Cloudinary cloudinary,
 			com.twinl.service.NotificationService notificationService
 	) {
@@ -52,6 +56,7 @@ public class ProductServiceImpl implements ProductService {
 		this.categoryRepository = categoryRepository;
 		this.colorRepository = colorRepository;
 		this.userRepository = userRepository;
+		this.orderRepository = orderRepository;
 		this.cloudinary = cloudinary;
 		this.notificationService = notificationService;
 	}
@@ -322,6 +327,21 @@ public class ProductServiceImpl implements ProductService {
 			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found");
 		}
 		productRepository.deleteById(id);
+	}
+
+	@Override
+	public SellerProfileResponse getSellerProfile(Long sellerId) {
+		User seller = userRepository.findById(sellerId)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Seller not found"));
+		long productCount = productRepository.countBySellerIdAndStatus(sellerId, "ACTIVE");
+		long soldCount = orderRepository.countSoldItemsBySellerId(sellerId);
+		return SellerProfileResponse.builder()
+				.id(seller.getId())
+				.displayName(seller.getDisplayName())
+				.avatarUrl(seller.getAvatarUrl())
+				.productCount(productCount)
+				.soldCount(soldCount)
+				.build();
 	}
 
 	@Override
