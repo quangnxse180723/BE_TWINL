@@ -13,6 +13,7 @@ import com.twinl.repository.CategoryRepository;
 import com.twinl.repository.ColorRepository;
 import com.twinl.repository.OrderRepository;
 import com.twinl.repository.ProductRepository;
+import com.twinl.repository.ShopReviewRepository;
 import com.twinl.repository.UserRepository;
 import com.twinl.service.ProductService;
 import java.math.BigDecimal;
@@ -40,6 +41,7 @@ public class ProductServiceImpl implements ProductService {
 	private final ColorRepository colorRepository;
 	private final UserRepository userRepository;
 	private final OrderRepository orderRepository;
+	private final ShopReviewRepository shopReviewRepository;
 	private final Cloudinary cloudinary;
 	private final com.twinl.service.NotificationService notificationService;
 
@@ -49,6 +51,7 @@ public class ProductServiceImpl implements ProductService {
 			ColorRepository colorRepository,
 			UserRepository userRepository,
 			OrderRepository orderRepository,
+			ShopReviewRepository shopReviewRepository,
 			Cloudinary cloudinary,
 			com.twinl.service.NotificationService notificationService
 	) {
@@ -57,6 +60,7 @@ public class ProductServiceImpl implements ProductService {
 		this.colorRepository = colorRepository;
 		this.userRepository = userRepository;
 		this.orderRepository = orderRepository;
+		this.shopReviewRepository = shopReviewRepository;
 		this.cloudinary = cloudinary;
 		this.notificationService = notificationService;
 	}
@@ -335,12 +339,21 @@ public class ProductServiceImpl implements ProductService {
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Seller not found"));
 		long productCount = productRepository.countBySellerIdAndStatus(sellerId, "ACTIVE");
 		long soldCount = orderRepository.countSoldItemsBySellerId(sellerId);
+		
+		Double averageRating = shopReviewRepository.getAverageRatingByShopId(sellerId);
+		if (averageRating == null) {
+			averageRating = 0.0;
+		}
+		long reviewCount = shopReviewRepository.countByShopId(sellerId);
+
 		return SellerProfileResponse.builder()
 				.id(seller.getId())
 				.displayName(seller.getDisplayName())
 				.avatarUrl(seller.getAvatarUrl())
 				.productCount(productCount)
 				.soldCount(soldCount)
+				.averageRating(averageRating)
+				.reviewCount(reviewCount)
 				.build();
 	}
 

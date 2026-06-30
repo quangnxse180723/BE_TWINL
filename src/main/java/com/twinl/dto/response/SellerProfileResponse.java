@@ -11,4 +11,6 @@ public class SellerProfileResponse {
     private String avatarUrl;
     private long productCount;
     private long soldCount;
+    private Double averageRating;
+    private long reviewCount;
 }
