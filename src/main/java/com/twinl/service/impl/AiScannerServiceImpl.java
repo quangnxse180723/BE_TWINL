@@ -333,7 +333,7 @@ public class AiScannerServiceImpl implements AiScannerService {
             "{\"name\": \"Tên sản phẩm ngắn gọn\", \"brand\": \"Thương hiệu hoặc Không xác định\", " +
             "\"category\": \"Tên danh mục phù hợp nhất (ví dụ: Áo thun, Áo khoác, Quần Jeans, Váy...)\", " +
             "\"style\": \"Phong cách thời trang bằng Tiếng Việt (VD: Đường phố, Cổ điển, Tối giản, Y2K, Thảo nguyên/Boho, Công sở, Năng động, Thể thao). KHÔNG dùng các từ miêu tả chung chung như 'thời thượng', 'nổi bật', 'cá tính'\", " +
-            "\"gender\": \"Nam hoặc Nữ hoặc Khác\", " +
+            "\"gender\": \"Nam hoặc Nữ (bắt buộc phải là 1 trong 2, nếu unisex thì tuỳ kiểu dáng nghiêng về giới tính nào)\", " +
             "\"description\": \"Mô tả chi tiết tiếng Việt 2-4 câu, nêu đặc điểm nổi bật và chất liệu\", " +
             "\"estimatedPrice\": \"Số tiền VNĐ ước tính dạng số nguyên (VD: 350000)\", " +
             "\"material\": \"Chất liệu chính\", \"condition\": \"Tình trạng: Mới/Như mới/Tốt/Bình thường\", " +
@@ -395,14 +395,14 @@ public class AiScannerServiceImpl implements AiScannerService {
                         // Phân loại danh mục cha (Nam, Nữ, Thể thao)
                         String gender = result.getGender() != null ? result.getGender().trim().toLowerCase() : "";
                         String style = result.getStyle() != null ? result.getStyle().trim().toLowerCase() : "";
-                        String parentName = null;
+                        String parentName = "Nữ"; // Fallback mặc định
                         
                         if (style.contains("thể thao") || style.contains("sport")) {
                             parentName = "Thể thao";
+                        } else if (gender.contains("nam") && !gender.contains("nữ")) {
+                            parentName = "Nam";
                         } else if (gender.contains("nữ") || gender.contains("nu")) {
                             parentName = "Nữ";
-                        } else if (gender.contains("nam")) {
-                            parentName = "Nam";
                         }
 
                         if (parentName != null) {
