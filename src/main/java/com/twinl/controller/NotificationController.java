@@ -45,6 +45,12 @@ public class NotificationController {
 		return ResponseEntity.ok().build();
 	}
 
+	@PutMapping("/read-all")
+	public ResponseEntity<Void> markAllAsRead(@AuthenticationPrincipal UserDetails userDetails) {
+		notificationService.markAllAsRead(userDetails.getUsername());
+		return ResponseEntity.ok().build();
+	}
+
 	@GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
 	public SseEmitter streamNotifications(@AuthenticationPrincipal UserDetails userDetails) {
 		return notificationService.subscribe(userDetails.getUsername());

@@ -14,6 +14,8 @@ public interface NotificationService {
 
 	void markAsRead(Long notificationId, String username);
 
+	void markAllAsRead(String username);
+
 	SseEmitter subscribe(String username);
 
 	int getOnlineUserCount();

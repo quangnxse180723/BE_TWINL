@@ -89,6 +89,14 @@ public class NotificationServiceImpl implements NotificationService {
 	}
 
 	@Override
+	@Transactional
+	public void markAllAsRead(String username) {
+		User user = userRepository.findByEmail(username)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User không tồn tại"));
+		notificationRepository.markAllAsReadByUser(user);
+	}
+
+	@Override
 	public SseEmitter subscribe(String username) {
 		SseEmitter emitter = new SseEmitter(60 * 60 * 1000L); // Timeout 1 giờ
 		emitters.put(username, emitter);
