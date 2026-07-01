@@ -317,6 +317,7 @@ public class OrderServiceImpl implements OrderService {
 						.productId(item.getProduct() != null ? item.getProduct().getId() : null)
 						.productName(item.getProduct() != null ? item.getProduct().getName() : null)
 						.imageUrl(item.getProduct() != null && item.getProduct().getImageUrls() != null && !item.getProduct().getImageUrls().isEmpty() ? item.getProduct().getImageUrls().get(0) : null)
+						.sellerId(item.getProduct() != null && item.getProduct().getSeller() != null ? item.getProduct().getSeller().getId() : null)
 						.quantity(item.getQuantity())
 						.unitPrice(item.getUnitPrice())
 						.lineTotal(item.getLineTotal())
