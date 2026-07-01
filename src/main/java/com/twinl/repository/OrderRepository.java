@@ -41,7 +41,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     /** Dùng để tra cứu đơn hàng PayOS theo orderCode số (được lưu vào paymentTxnRef) */
     Optional<Order> findByPaymentTxnRef(String paymentTxnRef);
 
-	@Query("SELECT COALESCE(SUM(i.quantity), 0) FROM OrderItem i WHERE i.product.seller.id = :sellerId AND i.order.status = com.twinl.entity.OrderStatus.DELIVERED")
+	@Query("SELECT COALESCE(SUM(i.quantity), 0L) FROM OrderItem i WHERE i.product.seller.id = :sellerId AND i.order.status = com.twinl.entity.OrderStatus.DELIVERED")
 	long countSoldItemsBySellerId(@Param("sellerId") Long sellerId);
 
 	@Query("SELECT COUNT(o) FROM Order o JOIN o.items i WHERE o.user.id = :userId AND i.product.seller.id = :sellerId AND o.status = com.twinl.entity.OrderStatus.DELIVERED")

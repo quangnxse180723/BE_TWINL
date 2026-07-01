@@ -49,6 +49,7 @@ public class SecurityConfig {
 						.requestMatchers("/uploads/**").permitAll()
 						.requestMatchers(HttpMethod.POST, "/api/contact").permitAll()
 						.requestMatchers(HttpMethod.POST, "/api/v1/analytics/track").permitAll()
+						.requestMatchers(HttpMethod.POST, "/api/v1/analytics/ping/**").permitAll()
 						.requestMatchers(HttpMethod.POST, "/api/v1/ai/scan").permitAll()
 						.requestMatchers(HttpMethod.POST, "/api/v1/ai/legit-check").permitAll()
 						.requestMatchers(HttpMethod.POST, "/api/v1/ai/image-quality", "/api/v1/ai/autofill").permitAll()
