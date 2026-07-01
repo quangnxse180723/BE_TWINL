@@ -92,8 +92,12 @@ public class NotificationServiceImpl implements NotificationService {
 	@Transactional
 	public void markAllAsRead(String username) {
 		User user = userRepository.findByEmail(username)
-				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User không tồn tại"));
-		notificationRepository.markAllAsReadByUser(user);
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User khong ton tai"));
+		List<Notification> unreadNotifications = notificationRepository.findByUserOrderByCreatedAtDesc(user).stream()
+				.filter(n -> !n.isRead())
+				.collect(Collectors.toList());
+		unreadNotifications.forEach(n -> n.setRead(true));
+		notificationRepository.saveAll(unreadNotifications);
 	}
 
 	@Override
