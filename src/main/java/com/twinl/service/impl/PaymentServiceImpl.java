@@ -509,6 +509,13 @@ public class PaymentServiceImpl implements PaymentService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
     }
 
+    @Override
+    public String getPaymentStatus(String orderCode) {
+        return orderRepository.findByCode(orderCode)
+                .map(order -> order.getPaymentStatus().name())
+                .orElse("NOT_FOUND");
+    }
+
     private static class ValidationResult {
         private final String txnRef;
         private final String transactionNo;

@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -53,6 +54,13 @@ public class PaymentController {
     @PostMapping("/sepay/create")
     public ResponseEntity<PaymentCreateResponse> createSepayPayment() {
         return ResponseEntity.ok(paymentService.createSepayPayment());
+    }
+
+    /** Public endpoint – kiểm tra trạng thái thanh toán theo mã đơn hàng (không cần JWT) */
+    @GetMapping("/status/{code}")
+    public ResponseEntity<Map<String, String>> getPaymentStatus(@PathVariable String code) {
+        String status = paymentService.getPaymentStatus(code);
+        return ResponseEntity.ok(Map.of("paymentStatus", status));
     }
 
     // ────────────────────────────────────────────────────────────

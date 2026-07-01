@@ -14,4 +14,7 @@ public interface PaymentService {
     // ──────────────── SEPAY (Tiền thật - VietQR) ────────────────
     PaymentCreateResponse createSepayPayment();
     void handleSepayWebhook(String rawBody);
+
+    /** Kiểm tra payment status theo mã đơn hàng (public – không cần auth) */
+    String getPaymentStatus(String orderCode);
 }

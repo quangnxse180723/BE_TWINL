@@ -57,6 +57,8 @@ public class SecurityConfig {
 						.requestMatchers("/api/payments/vnpay/return", "/api/payments/vnpay/ipn").permitAll()
 						// SePay Webhook – không cần JWT, bảo mật bằng Checksum Key
 						.requestMatchers(HttpMethod.POST, "/api/v1/payment/sepay-webhook").permitAll()
+						// Public: kiểm tra trạng thái thanh toán (để FE polling sau khi thanh toán QR)
+						.requestMatchers(HttpMethod.GET, "/api/payments/status/**").permitAll()
 						.requestMatchers(HttpMethod.GET, "/api/categories", "/api/colors").permitAll()
 
 						// In-house Shipper endpoints
