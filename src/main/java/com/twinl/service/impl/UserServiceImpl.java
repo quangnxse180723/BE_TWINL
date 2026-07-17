@@ -150,7 +150,7 @@ public class UserServiceImpl implements UserService {
 				.map(com.twinl.entity.Wallet::getBalance)
 				.orElse(java.math.BigDecimal.ZERO);
 		
-		long totalPurchased = orderRepository.countByBuyerId(userId);
+		long totalPurchased = orderRepository.countByUserId(userId);
 		long totalSold = orderRepository.countBySellerId(userId);
 		
 		return com.twinl.dto.response.UserStatsResponse.builder()
