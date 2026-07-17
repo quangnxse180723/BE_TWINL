@@ -139,6 +139,58 @@ public class WalletServiceImpl implements WalletService {
 
     @Override
     @Transactional
+    public void refundBuyer(Order order) {
+        if (Boolean.TRUE.equals(order.getEscrowReleased())) {
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "Escrow already released, cannot refund");
+        }
+
+        // 1. Deduct from seller's escrow
+        for (var item : order.getItems()) {
+            if (item.getProduct() != null && item.getProduct().getSeller() != null) {
+                User seller = item.getProduct().getSeller();
+                Wallet sellerWallet = getOrCreateWallet(seller);
+                
+                BigDecimal platformFee = item.getLineTotal().multiply(new BigDecimal("0.10"));
+                BigDecimal sellerAmount = item.getLineTotal().subtract(platformFee);
+                
+                if (sellerWallet.getEscrowBalance().compareTo(sellerAmount) >= 0) {
+                    sellerWallet.setEscrowBalance(sellerWallet.getEscrowBalance().subtract(sellerAmount));
+                } else {
+                    sellerWallet.setEscrowBalance(BigDecimal.ZERO);
+                }
+                walletRepository.save(sellerWallet);
+
+                WalletTransaction txn = WalletTransaction.builder()
+                        .wallet(sellerWallet)
+                        .amount(sellerAmount.negate())
+                        .type("ESCROW_REFUND_DEDUCT")
+                        .status("SUCCESS")
+                        .description("Thu hồi tiền chờ thanh toán do đơn " + order.getCode() + " hoàn trả")
+                        .order(order)
+                        .build();
+                transactionRepository.save(txn);
+            }
+        }
+
+        // 2. Add total amount to buyer's available balance
+        User buyer = order.getUser();
+        Wallet buyerWallet = getOrCreateWallet(buyer);
+        buyerWallet.setBalance(buyerWallet.getBalance().add(order.getTotalAmount()));
+        walletRepository.save(buyerWallet);
+
+        WalletTransaction refundTxn = WalletTransaction.builder()
+                .wallet(buyerWallet)
+                .amount(order.getTotalAmount())
+                .type("REFUND")
+                .status("SUCCESS")
+                .description("Hoàn tiền đơn hàng " + order.getCode())
+                .order(order)
+                .build();
+        transactionRepository.save(refundTxn);
+    }
+
+    @Override
+    @Transactional
     public void processCommission(Order order) {
         Wallet wallet = getAdminWallet();
         if (wallet == null) return;

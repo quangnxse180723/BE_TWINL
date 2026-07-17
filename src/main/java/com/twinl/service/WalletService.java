@@ -5,6 +5,7 @@ import com.twinl.entity.Order;
 public interface WalletService {
     void holdEscrow(Order order);
     void releaseEscrow(Order order);
+    void refundBuyer(Order order);
     void processCommission(Order order);
     
     com.twinl.dto.response.WalletResponse getMyWallet(String username);
