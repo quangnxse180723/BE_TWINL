@@ -51,8 +51,8 @@ public class WalletController {
 
     @GetMapping("/admin/withdrawals")
     @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<java.util.List<com.twinl.dto.response.WithdrawalRequestResponse>> getPendingWithdrawals() {
-        return ResponseEntity.ok(walletService.getPendingWithdrawals());
+    public ResponseEntity<java.util.List<com.twinl.dto.response.WithdrawalRequestResponse>> getAllWithdrawals() {
+        return ResponseEntity.ok(walletService.getAllWithdrawals());
     }
 
     @org.springframework.web.bind.annotation.PostMapping("/admin/withdrawals/{id}/approve")

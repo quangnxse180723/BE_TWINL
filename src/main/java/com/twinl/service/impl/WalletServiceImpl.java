@@ -28,17 +28,20 @@ public class WalletServiceImpl implements WalletService {
     private final UserRepository userRepository;
     private final OrderRepository orderRepository;
     private final com.twinl.repository.ProductRepository productRepository;
+    private final com.twinl.service.NotificationService notificationService;
 
     public WalletServiceImpl(WalletRepository walletRepository,
                              WalletTransactionRepository transactionRepository,
                              UserRepository userRepository,
                              OrderRepository orderRepository,
-                             com.twinl.repository.ProductRepository productRepository) {
+                             com.twinl.repository.ProductRepository productRepository,
+                             com.twinl.service.NotificationService notificationService) {
         this.walletRepository = walletRepository;
         this.transactionRepository = transactionRepository;
         this.userRepository = userRepository;
         this.orderRepository = orderRepository;
         this.productRepository = productRepository;
+        this.notificationService = notificationService;
     }
 
     private Wallet getAdminWallet() {
@@ -261,9 +264,10 @@ public class WalletServiceImpl implements WalletService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<com.twinl.dto.response.WithdrawalRequestResponse> getPendingWithdrawals() {
+    public List<com.twinl.dto.response.WithdrawalRequestResponse> getAllWithdrawals() {
         return transactionRepository.findAll().stream()
-                .filter(t -> "WITHDRAWAL".equals(t.getType()) && "PENDING".equals(t.getStatus()))
+                .filter(t -> "WITHDRAWAL".equals(t.getType()))
+                .sorted(java.util.Comparator.comparing(WalletTransaction::getCreatedAt).reversed())
                 .map(t -> com.twinl.dto.response.WithdrawalRequestResponse.builder()
                         .id(t.getId())
                         .sellerName(t.getWallet().getUser().getDisplayName())
@@ -290,6 +294,13 @@ public class WalletServiceImpl implements WalletService {
         
         txn.setStatus("SUCCESS");
         transactionRepository.save(txn);
+        
+        notificationService.sendNotification(
+            txn.getWallet().getUser(),
+            "Rút tiền thành công",
+            "Yêu cầu rút " + txn.getAmount() + " VNĐ của bạn đã được duyệt và chuyển khoản thành công.",
+            "WITHDRAWAL_SUCCESS"
+        );
     }
 
     @Override
@@ -303,8 +314,15 @@ public class WalletServiceImpl implements WalletService {
         }
         
         txn.setStatus("FAILED");
-        txn.setDescription(txn.getDescription() + " - Từ chối: " + reason);
+        txn.setDescription("Yêu cầu rút tiền bị từ chối: " + reason);
         transactionRepository.save(txn);
+        
+        notificationService.sendNotification(
+            txn.getWallet().getUser(),
+            "Rút tiền bị từ chối",
+            "Yêu cầu rút " + txn.getAmount() + " VNĐ của bạn đã bị từ chối với lý do: " + reason,
+            "WITHDRAWAL_FAILED"
+        );
         
         // Hoàn tiền lại cho ví
         Wallet wallet = txn.getWallet();

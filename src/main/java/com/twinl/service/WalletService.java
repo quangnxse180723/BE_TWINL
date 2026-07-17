@@ -12,7 +12,7 @@ public interface WalletService {
     com.twinl.dto.response.SellerStatisticsResponse getSellerStatistics(String username);
 
     void requestWithdrawal(String username, java.math.BigDecimal amount);
-    java.util.List<com.twinl.dto.response.WithdrawalRequestResponse> getPendingWithdrawals();
+    java.util.List<com.twinl.dto.response.WithdrawalRequestResponse> getAllWithdrawals();
     void approveWithdrawal(Long transactionId);
     void rejectWithdrawal(Long transactionId, String reason);
 }
