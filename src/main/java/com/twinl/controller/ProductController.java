@@ -73,6 +73,13 @@ public class ProductController {
 		));
 	}
 
+	@GetMapping("/brands")
+	public ResponseEntity<Object> getDistinctBrands() {
+		return ResponseEntity.ok(
+			java.util.Map.of("message", "Successfully retrieved brands", "data", productService.getDistinctBrands())
+		);
+	}
+
 	@GetMapping("/{id}")
 	public ResponseEntity<ProductResponse> getProductById(@PathVariable Long id) {
 		return ResponseEntity.ok(productService.getProductById(id));
