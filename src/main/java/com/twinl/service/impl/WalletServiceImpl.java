@@ -224,4 +224,91 @@ public class WalletServiceImpl implements WalletService {
                 .pendingEscrow(wallet.getEscrowBalance())
                 .build();
     }
+
+    @Override
+    @Transactional
+    public void requestWithdrawal(String username, BigDecimal amount) {
+        User user = userRepository.findByEmail(username)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy user"));
+        
+        Wallet wallet = getOrCreateWallet(user);
+        
+        if (wallet.getBankName() == null || wallet.getBankAccountNumber() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Vui lòng cập nhật thông tin ngân hàng trước khi rút tiền");
+        }
+        
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Số tiền rút không hợp lệ");
+        }
+        
+        if (wallet.getBalance().compareTo(amount) < 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Số dư không đủ để rút");
+        }
+        
+        // Trừ tiền ngay khi tạo yêu cầu
+        wallet.setBalance(wallet.getBalance().subtract(amount));
+        walletRepository.save(wallet);
+        
+        WalletTransaction txn = WalletTransaction.builder()
+                .wallet(wallet)
+                .amount(amount)
+                .type("WITHDRAWAL")
+                .status("PENDING")
+                .description("Yêu cầu rút tiền về " + wallet.getBankName() + " (" + wallet.getBankAccountNumber() + ")")
+                .build();
+        transactionRepository.save(txn);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<com.twinl.dto.response.WithdrawalRequestResponse> getPendingWithdrawals() {
+        return transactionRepository.findAll().stream()
+                .filter(t -> "WITHDRAWAL".equals(t.getType()) && "PENDING".equals(t.getStatus()))
+                .map(t -> com.twinl.dto.response.WithdrawalRequestResponse.builder()
+                        .id(t.getId())
+                        .sellerName(t.getWallet().getUser().getDisplayName())
+                        .sellerEmail(t.getWallet().getUser().getEmail())
+                        .amount(t.getAmount())
+                        .bankName(t.getWallet().getBankName())
+                        .bankAccountNumber(t.getWallet().getBankAccountNumber())
+                        .bankAccountName(t.getWallet().getBankAccountName())
+                        .createdAt(t.getCreatedAt())
+                        .status(t.getStatus())
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public void approveWithdrawal(Long transactionId) {
+        WalletTransaction txn = transactionRepository.findById(transactionId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy giao dịch"));
+                
+        if (!"WITHDRAWAL".equals(txn.getType()) || !"PENDING".equals(txn.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Giao dịch không hợp lệ để duyệt");
+        }
+        
+        txn.setStatus("SUCCESS");
+        transactionRepository.save(txn);
+    }
+
+    @Override
+    @Transactional
+    public void rejectWithdrawal(Long transactionId, String reason) {
+        WalletTransaction txn = transactionRepository.findById(transactionId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy giao dịch"));
+                
+        if (!"WITHDRAWAL".equals(txn.getType()) || !"PENDING".equals(txn.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Giao dịch không hợp lệ để từ chối");
+        }
+        
+        txn.setStatus("FAILED");
+        txn.setDescription(txn.getDescription() + " - Từ chối: " + reason);
+        transactionRepository.save(txn);
+        
+        // Hoàn tiền lại cho ví
+        Wallet wallet = txn.getWallet();
+        wallet.setBalance(wallet.getBalance().add(txn.getAmount()));
+        walletRepository.save(wallet);
+    }
 }
