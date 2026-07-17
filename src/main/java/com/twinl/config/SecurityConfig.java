@@ -74,6 +74,9 @@ public class SecurityConfig {
 						.requestMatchers(HttpMethod.POST, "/api/products", "/api/products/images").authenticated()
 						.requestMatchers("/api/products/**").hasAnyRole("ADMIN", "STAFF")
 
+						// Outfit Sets - public GET, admin write
+						.requestMatchers(HttpMethod.GET, "/api/outfit-sets", "/api/outfit-sets/**").permitAll()
+
 						// Users
 						.requestMatchers("/api/users/me", "/api/users/me/**").authenticated()
 						.requestMatchers("/api/users/**").hasAnyRole("ADMIN", "STAFF")
