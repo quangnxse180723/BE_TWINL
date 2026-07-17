@@ -75,4 +75,9 @@ public class UserController {
 	) {
 		return ResponseEntity.ok(userService.updateUserStatus(id, request));
 	}
+
+	@GetMapping("/{id}/stats")
+	public ResponseEntity<com.twinl.dto.response.UserStatsResponse> getUserStats(@PathVariable Long id) {
+		return ResponseEntity.ok(userService.getUserStats(id));
+	}
 }

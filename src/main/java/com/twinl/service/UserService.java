@@ -15,6 +15,8 @@ public interface UserService {
 	void changePassword(ChangePasswordRequest request);
 	UserResponse updateAvatar(MultipartFile file);
 	List<UserResponse> getAllUsers();
+
+	com.twinl.dto.response.UserStatsResponse getUserStats(Long userId);
 	UserResponse createUser(CreateUserRequest request);
 	UserResponse updateUser(Long id, UpdateUserRequest request);
 	UserResponse updateUserStatus(Long id, UpdateUserStatusRequest request);

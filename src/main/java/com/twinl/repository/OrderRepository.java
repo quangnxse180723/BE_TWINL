@@ -32,6 +32,11 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
 	Page<Order> findByShipperId(Long shipperId, Pageable pageable);
 
+	long countByBuyerId(Long buyerId);
+
+	@Query("SELECT COUNT(DISTINCT o) FROM Order o JOIN o.items i WHERE i.product.seller.id = :sellerId AND o.status = 'COMPLETED'")
+	long countBySellerId(@Param("sellerId") Long sellerId);
+
 	@Query("SELECT DISTINCT o FROM Order o JOIN o.items i WHERE i.product.seller.id = :sellerId")
 	Page<Order> findOrdersBySellerId(@Param("sellerId") Long sellerId, Pageable pageable);
 

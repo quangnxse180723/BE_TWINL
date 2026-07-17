@@ -30,17 +30,23 @@ public class UserServiceImpl implements UserService {
 	private final RoleRepository roleRepository;
 	private final PasswordEncoder passwordEncoder;
 	private final Cloudinary cloudinary;
+	private final com.twinl.repository.WalletRepository walletRepository;
+	private final com.twinl.repository.OrderRepository orderRepository;
 
 	public UserServiceImpl(
 			UserRepository userRepository,
 			RoleRepository roleRepository,
 			PasswordEncoder passwordEncoder,
-			Cloudinary cloudinary
+			Cloudinary cloudinary,
+			com.twinl.repository.WalletRepository walletRepository,
+			com.twinl.repository.OrderRepository orderRepository
 	) {
 		this.userRepository = userRepository;
 		this.roleRepository = roleRepository;
 		this.passwordEncoder = passwordEncoder;
 		this.cloudinary = cloudinary;
+		this.walletRepository = walletRepository;
+		this.orderRepository = orderRepository;
 	}
 
 	@Override
@@ -133,6 +139,25 @@ public class UserServiceImpl implements UserService {
 		return userRepository.findAll().stream()
 				.map(this::toUserResponse)
 				.collect(Collectors.toList());
+	}
+
+	@Override
+	public com.twinl.dto.response.UserStatsResponse getUserStats(Long userId) {
+		User user = userRepository.findById(userId)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+		
+		java.math.BigDecimal balance = walletRepository.findByUserId(userId)
+				.map(com.twinl.entity.Wallet::getBalance)
+				.orElse(java.math.BigDecimal.ZERO);
+		
+		long totalPurchased = orderRepository.countByBuyerId(userId);
+		long totalSold = orderRepository.countBySellerId(userId);
+		
+		return com.twinl.dto.response.UserStatsResponse.builder()
+				.walletBalance(balance)
+				.totalOrdersPurchased(totalPurchased)
+				.totalOrdersSold(totalSold)
+				.build();
 	}
 
 	@Override
