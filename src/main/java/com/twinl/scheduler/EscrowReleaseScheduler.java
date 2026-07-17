@@ -31,8 +31,8 @@ public class EscrowReleaseScheduler {
                 .filter(o -> o.getStatus() == OrderStatus.DELIVERED)
                 .filter(o -> Boolean.FALSE.equals(o.getEscrowReleased()))
                 .filter(o -> o.getDeliveredAt() != null)
-                // Điều kiện: Đã qua 24h kể từ lúc giao hàng thành công
-                .filter(o -> o.getDeliveredAt().plusHours(24).isBefore(LocalDateTime.now()))
+                // Điều kiện: Đã qua 48h kể từ lúc giao hàng thành công
+                .filter(o -> o.getDeliveredAt().plusHours(48).isBefore(LocalDateTime.now()))
                 .toList();
 
         if (eligibleOrders.isEmpty()) {
