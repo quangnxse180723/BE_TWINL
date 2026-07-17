@@ -281,6 +281,11 @@ public class ProductServiceImpl implements ProductService {
 	}
 
 	@Override
+	public java.util.List<String> getDistinctBrands() {
+		return productRepository.findDistinctBrands();
+	}
+
+	@Override
 	public ProductResponse updateProductStatus(Long id, String status) {
 		Product product = productRepository.findById(id)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));

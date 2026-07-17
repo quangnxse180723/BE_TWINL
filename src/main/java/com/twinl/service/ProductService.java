@@ -33,6 +33,7 @@ public interface ProductService {
 	ProductResponse createProduct(ProductRequest request);
 	ProductResponse createSellerProduct(ProductRequest request, String username);
 	Page<ProductResponse> getProductsBySeller(String username, int page, int sizePage);
+	java.util.List<String> getDistinctBrands();
 	ProductResponse updateProduct(Long id, ProductRequest request);
 	ProductResponse updateProductStatus(Long id, String status);
 	void deleteProduct(Long id);
